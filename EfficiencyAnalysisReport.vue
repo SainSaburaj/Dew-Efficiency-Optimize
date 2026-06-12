@@ -554,7 +554,7 @@
                                 :key="'dept-' + deptIndex">
                                 <!-- Department Total Row -->
                                 <tr class="bg-blue-50 font-bold border-b-8 border-b-gray-200 text-[11px] ">
-                                    <td class="px-3 py-2"></td>
+                                    <td class="px-3 py-2 text-center font-normal">{{ deptIndex + 1 }}</td>
                                     <td class="px-3 py-2 text-center">{{ dept.name }}</td>
                                     <td class="px-3 py-2 text-center bg-blue-100">{{ dept.bag_count || 0 }}</td>
                                     <!-- Hidden columns colspan removed -->
@@ -572,8 +572,8 @@
                                     <td class="px-3 py-2 text-red-500">{{ getSummaryDeptTotals(dept).diamondLossPct }}</td>
                                     <td class="px-3 py-2">{{ roundToTwo(getSummaryDeptTotals(dept).receivedPieces) }}</td>
                                     <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).lossPieces) }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryDeptTotals(dept).recoveryWt) }}</td>
-                                    <td class="px-3 py-2">{{ getSummaryDeptTotals(dept).recoveryWt > 0 && getDeptRecoveryPercentage(dept) > 0 ? roundToTwo(getDeptRecoveryPercentage(dept)) + '%' : '0%' }}</td>
+                                    <td class="px-3 py-2">{{ roundToTwo((() => { const pl = getSummaryDeptTotals(dept).pl; const pct = getDeptRecoveryPercentage(dept); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
+                                    <td class="px-3 py-2">{{ getDeptRecoveryPercentage(dept) > 0 ? roundToTwo(getDeptRecoveryPercentage(dept)) + '%' : '0%' }}</td>
                                 </tr>
                             </template>
 
@@ -637,12 +637,11 @@
                                 <!-- Loss Pieces Total -->
                                 <td class="px-3 py-2 text-red-500">{{ totalDeptLossPieces }}</td>
 
-
                                 <!-- Gold Recovery Weight -->
-                                <td class="px-3 py-2">{{ totalDeptGoldRecoveryWeight }}</td>
+                                <td class="px-3 py-2">{{ roundToTwo((() => { let totalRecoveryWt = 0; selectedDepartmentData.forEach(dept => { const pct = getDeptRecoveryPercentage(dept); const deptPl = parseFloat(dept.pure_loss_gold || 0); if (pct > 0 && deptPl > 0) totalRecoveryWt += deptPl * (pct / 100); }); return totalRecoveryWt; })()) }}</td>
 
                                 <!-- Gold Recovery Percentage -->
-                                <td class="px-3 py-2">{{ parseFloat(totalDeptGoldRecoveryWeight) > 0 && parseFloat(totalDeptPureLoss) > 0 ? roundToTwo((parseFloat(totalDeptGoldRecoveryWeight) / parseFloat(totalDeptPureLoss)) * 100) + '%' : '0%' }}</td>
+                                <td class="px-3 py-2">{{ (() => { let totalRecoveryWt = 0; selectedDepartmentData.forEach(dept => { const pct = getDeptRecoveryPercentage(dept); const deptPl = parseFloat(dept.pure_loss_gold || 0); if (pct > 0 && deptPl > 0) totalRecoveryWt += deptPl * (pct / 100); }); const pl = parseFloat(totalDeptPureLoss); return pl > 0 && totalRecoveryWt > 0 ? roundToTwo((totalRecoveryWt / pl) * 100) + '%' : '0%'; })() }}</td>
                             </tr>
                         </tbody>
 
@@ -653,7 +652,7 @@
                                 <!-- Employee Total Row -->
                                 <tr
                                     class="bg-blue-50 font-bold border-b-8 border-b-gray-200 border-blue-200 text-[11px]">
-                                    <td class="px-3 py-2"></td>
+                                    <td class="px-3 py-2 text-center font-normal">{{ empIndex + 1 }}</td>
                                     <td class="px-3 py-2 text-center">{{ emp.name }}</td>
                                     <td class="px-3 py-2 text-center bg-blue-100">{{ emp.bag_count || 0 }}</td>
                                     <td class="px-3 py-2">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).issuedNetWt) }}</td>
@@ -676,8 +675,8 @@
                                     <td class="px-3 py-2">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).receivedPieces) }}</td>
                                     <!-- Loss Pieces -->
                                     <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).lossPieces) }}</td>
-                                    <td class="px-3 py-2">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); return roundToTwo(getEmpTotals(emp, dept || null).recoveryWt); })() }}</td>
-                                    <td class="px-3 py-2">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); return getEmpTotals(emp, dept || null).recoveryPct; })() }}</td>
+                                    <td class="px-3 py-2">{{ roundToTwo((() => { const pl = getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).pl; const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); const pct = getEmpRecoveryPercentage(emp, dept || null); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
+                                    <td class="px-3 py-2">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); const pct = getEmpRecoveryPercentage(emp, dept || null); return pct > 0 ? roundToTwo(pct) + '%' : '0%'; })() }}</td>
                                 </tr>
                             </template>
 
@@ -686,7 +685,7 @@
                                 <!-- Unassigned Total Row -->
                                 <tr v-if="getUnassignedBagsData(selectedDeptObject)"
                                     class="bg-blue-50 font-bold border-b-8 border-b-gray-200 text-[11px]">
-                                    <td class="px-3 py-2"></td>
+                                    <td class="px-3 py-2 text-center">{{ selectedEmployees.length + 1 }}</td>
                                     <td class="px-3 py-2 text-center" colspan="2">Unassigned — Total</td>
                                     <td class="px-3 py-2 text-center bg-blue-100">{{ getUnassignedBagsData(selectedDeptObject).bag_count || 0 }}</td>
                                     <td class="px-3 py-2" colspan="2"></td>
@@ -778,10 +777,10 @@
                                 <td class="px-3 py-2 text-red-500">{{ roundToTwo(parseFloat(totalEmpLossPieces)) }}</td>
 
                                 <!-- Gold Recovery Weight -->
-                                <td class="px-3 py-2">{{ totalEmpGoldRecoveryWeight }}</td>
+                                <td class="px-3 py-2">{{ roundToTwo((() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); if (!dept) return 0; const pct = getEmpRecoveryPercentage(selectedEmployees[0], dept); const pl = parseFloat(totalEmpPureLoss); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
 
                                 <!-- Gold Recovery Percentage -->
-                                <td class="px-3 py-2">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); if (!dept) return '0%'; const pct = getDeptRecoveryPercentage(dept); const rw = parseFloat(totalEmpGoldRecoveryWeight); const pl = parseFloat(totalEmpPureLoss); return rw > 0 && pl > 0 ? roundToTwo((rw / pl) * 100) + '%' : '0%'; })() }}</td>
+                                <td class="px-3 py-2">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); if (!dept) return '0%'; const selectedEmp = selectedEmployees && selectedEmployees.length > 0 ? selectedEmployees[0] : null; const pct = selectedEmp ? getEmpRecoveryPercentage(selectedEmp, dept) : 0; return pct > 0 ? roundToTwo(pct) + '%' : '0%'; })() }}</td>
                             </tr>
                         </tbody>
 
@@ -872,14 +871,20 @@ export default {
         const recoveryMapVersion = ref(0);
 
         // Helper to get recovery percentage for a specific department
+        // Now reads directly from dept.recovery_percentage_gold (populated by backend summary function)
         const getDeptRecoveryPercentage = (dept) => {
             void recoveryMapVersion.value; // ← reactive dependency
             if (!dept) return 0;
+            // ✅ Read directly from backend-populated field
+            if (dept.recovery_percentage_gold !== undefined && dept.recovery_percentage_gold !== null) {
+                return parseFloat(dept.recovery_percentage_gold || 0);
+            }
+            // Fallback to old map for backward compatibility
             const byId = deptRecoveryPercentageMap.value[dept.id];
             if (byId !== undefined && byId !== null) return byId;
             const byName = deptRecoveryPercentageMap.value[dept.name];
             if (byName !== undefined && byName !== null) return byName;
-            return 0; // Return 0 instead of global average
+            return 0;
         };
 
         const getEmpRecoveryPercentage = (emp, dept) => {
@@ -889,6 +894,12 @@ export default {
                 return 0;
             }
 
+            // ✅ Read directly from backend-populated field (PRIORITY 1)
+            if (emp.recovery_percentage_gold !== undefined && emp.recovery_percentage_gold !== null) {
+                return parseFloat(emp.recovery_percentage_gold || 0);
+            }
+
+            // Fallback to old map logic for backward compatibility
             // Try looking up the deptMap using different keys
             let deptMap = null;
 
@@ -2773,6 +2784,11 @@ export default {
 
         // Helper: Sum all displayed values in a column for a department (simple column sum)
         const getDeptColumnSum = (dept, columnKey) => {
+            // ✅ For summary fields, return directly from backend if available
+            if (columnKey === 'recoveryWt' && dept && dept.recovery_weight_gold !== undefined) {
+                return parseFloat(dept.recovery_weight_gold || 0);
+            }
+
             let sum = 0;
             (dept.unique_categories_array || []).forEach(cat => {
                 (dept.category_bag_names_map?.[cat] || []).forEach(bagName => {
@@ -2828,6 +2844,7 @@ export default {
                             sum += getBagLossPiecesRaw(dept, cat, bagName);
                             break;
                         case 'recoveryWt': {
+                            // Fallback to computing from bags (only if summary field not available)
                             const pureLoss = getBagLossQtyGoldRaw(dept, cat, bagName)
                                 * getBagPurityFactor(dept, cat, bagName);
                             // Use dept-specific pct
@@ -2845,6 +2862,11 @@ export default {
 
         // Helper: Sum all displayed values in a column for an employee (simple column sum)
         const getEmpColumnSum = (emp, columnKey, dept = null) => {
+            // ✅ For summary fields, return directly from backend if available
+            if (columnKey === 'recoveryWt' && emp && emp.recovery_weight_gold !== undefined) {
+                return parseFloat(emp.recovery_weight_gold || 0);
+            }
+
             let sum = 0;
             (emp.unique_categories_array || []).forEach(cat => {
                 (emp.category_bag_names_map?.[cat] || []).forEach(bagName => {
@@ -2900,6 +2922,7 @@ export default {
                             sum += getEmpBagLossPiecesRaw(emp, cat, bagName);
                             break;
                         case 'recoveryWt': {
+                            // Fallback to computing from bags (only if summary field not available)
                             const pureLoss = getEmpBagLossQtyGoldRaw(emp, cat, bagName)
                                 * getEmpBagPurityFactor(emp, cat, bagName);
                             const pct = dept ? getEmpRecoveryPercentage(emp, dept) : 0;
@@ -3581,46 +3604,52 @@ export default {
                 await fetchListEfficiencyAnalysis(locationId, formattedStartDate, formattedEndDate, isRepairOnly);
 
                 // ── Log fetched summary data for debugging ────────────────────────────────────
-                if (listEfficiencyData.value && Object.keys(listEfficiencyData.value).length > 0) {
-                    const summaryLog = [];
-                    summaryLog.push('\n🔄 FETCHED SUMMARY EFFICIENCY DATA:\n');
+                // if (listEfficiencyData.value && Object.keys(listEfficiencyData.value).length > 0) {
+                //     const summaryLog = [];
+                //     summaryLog.push('\n🔄 FETCHED SUMMARY EFFICIENCY DATA:\n');
                     
-                    Object.entries(listEfficiencyData.value || {}).forEach(([locId, locData]) => {
-                        summaryLog.push(`📍 LOCATION: ${locData.location_name} (Total Unique Bags: ${locData.total_unique_bags})`);
+                //     Object.entries(listEfficiencyData.value || {}).forEach(([locId, locData]) => {
+                //         summaryLog.push(`📍 LOCATION: ${locData.location_name} (Total Unique Bags: ${locData.total_unique_bags})`);
                         
-                        Object.entries(locData.departments || {}).forEach(([deptId, dept]) => {
-                            summaryLog.push(`\n  🏭 DEPARTMENT: ${dept.department_name}`);
-                            summaryLog.push(`     ├─ Bags: ${dept.bag_count}`);
-                            summaryLog.push(`     ├─ Gold Metrics:`);
-                            summaryLog.push(`     │  ├─ Issued Net Wt (Gold): ${(dept.issued_net_wt_gold || 0).toFixed(4)}`);
-                            summaryLog.push(`     │  ├─ Received Qty (Gold): ${(dept.received_qty_gold || 0).toFixed(4)}`);
-                            summaryLog.push(`     │  ├─ Gross Loss (Gold): ${(dept.gross_loss_gold || 0).toFixed(4)}`);
-                            summaryLog.push(`     │  ├─ Pure Weight (Gold): ${(dept.pure_weight_gold || 0).toFixed(4)}`);
-                            summaryLog.push(`     │  ├─ Pure Loss (Gold): ${(dept.pure_loss_gold || 0).toFixed(4)}`);
-                            summaryLog.push(`     │  └─ Net Loss (Gold): ${(dept.net_loss_gold || 0).toFixed(6)}`);
-                            summaryLog.push(`     └─ Diamond Metrics:`);
-                            summaryLog.push(`        ├─ Issued Net Wt (Diamond): ${(dept.issued_net_wt_diamond || 0).toFixed(4)}`);
-                            summaryLog.push(`        ├─ Received Qty (Diamond): ${(dept.received_qty_diamond || 0).toFixed(4)}`);
-                            summaryLog.push(`        ├─ Loss Qty (Diamond): ${(dept.loss_qty_diamond || 0).toFixed(4)}`);
-                            summaryLog.push(`        ├─ Received Pieces: ${(dept.received_pieces || 0).toFixed(4)}`);
-                            summaryLog.push(`        └─ Loss Pieces: ${(dept.loss_pieces || 0).toFixed(4)}`);
+                //         Object.entries(locData.departments || {}).forEach(([deptId, dept]) => {
+                //             summaryLog.push(`\n  🏭 DEPARTMENT: ${dept.department_name}`);
+                //             summaryLog.push(`     ├─ Bags: ${dept.bag_count}`);
+                //             summaryLog.push(`     ├─ Gold Metrics:`);
+                //             summaryLog.push(`     │  ├─ Issued Net Wt (Gold): ${(dept.issued_net_wt_gold || 0).toFixed(4)}`);
+                //             summaryLog.push(`     │  ├─ Received Qty (Gold): ${(dept.received_qty_gold || 0).toFixed(4)}`);
+                //             summaryLog.push(`     │  ├─ Gross Loss (Gold): ${(dept.gross_loss_gold || 0).toFixed(4)}`);
+                //             summaryLog.push(`     │  ├─ Pure Weight (Gold): ${(dept.pure_weight_gold || 0).toFixed(4)}`);
+                //             summaryLog.push(`     │  ├─ Pure Loss (Gold): ${(dept.pure_loss_gold || 0).toFixed(4)}`);
+                //             summaryLog.push(`     │  └─ Net Loss (Gold): ${(dept.net_loss_gold || 0).toFixed(6)}`);
+                //             summaryLog.push(`     ├─ Recovery Metrics:`);
+                //             summaryLog.push(`     │  ├─ Recovery Percentage (Gold): ${(dept.recovery_percentage_gold || 0).toFixed(2)}%`);
+                //             summaryLog.push(`     │  └─ Recovery Weight (Gold): ${(dept.recovery_weight_gold || 0).toFixed(4)}`);
+                //             summaryLog.push(`     └─ Diamond Metrics:`);
+                //             summaryLog.push(`        ├─ Issued Net Wt (Diamond): ${(dept.issued_net_wt_diamond || 0).toFixed(4)}`);
+                //             summaryLog.push(`        ├─ Received Qty (Diamond): ${(dept.received_qty_diamond || 0).toFixed(4)}`);
+                //             summaryLog.push(`        ├─ Loss Qty (Diamond): ${(dept.loss_qty_diamond || 0).toFixed(4)}`);
+                //             summaryLog.push(`        ├─ Received Pieces: ${(dept.received_pieces || 0).toFixed(4)}`);
+                //             summaryLog.push(`        └─ Loss Pieces: ${(dept.loss_pieces || 0).toFixed(4)}`);
                             
-                            // Log employees if they exist
-                            if (dept.employees_array && dept.employees_array.length > 0) {
-                                summaryLog.push(`\n     👥 EMPLOYEES (${dept.employees_array.length}):`);
-                                dept.employees_array.forEach((emp, idx) => {
-                                    const isLast = idx === dept.employees_array.length - 1;
-                                    summaryLog.push(`     ${isLast ? '└' : '├'}─ ${emp.name} (Bags: ${emp.bag_count})`);
-                                    summaryLog.push(`        ${isLast ? ' ' : '│'}  ├─ Issued Net Wt: ${(emp.issued_net_wt_gold || 0).toFixed(4)}`);
-                                    summaryLog.push(`        ${isLast ? ' ' : '│'}  ├─ Received Qty: ${(emp.received_qty_gold || 0).toFixed(4)}`);
-                                    summaryLog.push(`        ${isLast ? ' ' : '│'}  └─ Loss Qty: ${(emp.gross_loss_gold || 0).toFixed(4)}`);
-                                });
-                            }
-                        });
-                    });
+                //             // Log employees if they exist
+                //             if (dept.employees_array && dept.employees_array.length > 0) {
+                //                 summaryLog.push(`\n     👥 EMPLOYEES (${dept.employees_array.length}):`);
+                //                 dept.employees_array.forEach((emp, idx) => {
+                //                     const isLast = idx === dept.employees_array.length - 1;
+                //                     summaryLog.push(`     ${isLast ? '└' : '├'}─ ${emp.name} (Bags: ${emp.bag_count})`);
+                //                     summaryLog.push(`        ${isLast ? ' ' : '│'}  ├─ Issued Net Wt: ${(emp.issued_net_wt_gold || 0).toFixed(4)}`);
+                //                     summaryLog.push(`        ${isLast ? ' ' : '│'}  ├─ Received Qty: ${(emp.received_qty_gold || 0).toFixed(4)}`);
+                //                     summaryLog.push(`        ${isLast ? ' ' : '│'}  ├─ Gross Loss: ${(emp.gross_loss_gold || 0).toFixed(4)}`);
+                //                     summaryLog.push(`        ${isLast ? ' ' : '│'}  ├─ Pure Loss: ${(emp.pure_loss_gold || 0).toFixed(4)}`);
+                //                     summaryLog.push(`        ${isLast ? ' ' : '│'}  ├─ Recovery %: ${(emp.recovery_percentage_gold || 0).toFixed(2)}%`);
+                //                     summaryLog.push(`        ${isLast ? ' ' : '│'}  └─ Recovery Wt: ${(emp.recovery_weight_gold || 0).toFixed(4)}`);
+                //                 });
+                //             }
+                //         });
+                //     });
                     
-                    console.log(summaryLog.join('\n'));
-                }
+                //     console.log(summaryLog.join('\n'));
+                // }
 
                 Object.entries(listEfficiencyData.value || {}).forEach(([locId, locData]) => {
                     Object.entries(locData.departments || {}).forEach(([deptId, dept]) => {
@@ -3678,6 +3707,9 @@ export default {
                                     loss_qty_diamond: dept.loss_qty_diamond,
                                     received_pieces: dept.received_pieces,
                                     loss_pieces: dept.loss_pieces,
+                                    // Recovery fields from backend
+                                    recovery_percentage_gold: dept.recovery_percentage_gold ?? 0,
+                                    recovery_weight_gold: dept.recovery_weight_gold ?? 0,
                                     employees: (dept.employees_array || []).map(emp => {
                                         // Build category_qty_map from categories array
                                         const categoryQtyMap = {};
@@ -3727,7 +3759,10 @@ export default {
                                             received_qty_diamond: emp.received_qty_diamond,
                                             loss_qty_diamond: emp.loss_qty_diamond,
                                             received_pieces: emp.received_pieces,
-                                            loss_pieces: emp.loss_pieces
+                                            loss_pieces: emp.loss_pieces,
+                                            // Recovery fields from backend
+                                            recovery_percentage_gold: emp.recovery_percentage_gold ?? 0,
+                                            recovery_weight_gold: emp.recovery_weight_gold ?? 0,
                                         };
                                         return empObj;
                                     })
@@ -3956,6 +3991,8 @@ export default {
                 });
                 deptRecoveryPercentageMap.value = newDeptMap;
 
+                console.log('[fetchDeptRecoveryPercentages]:', newDeptMap);
+
                 // Build employee map (case-insensitive indexing)
                 const rawEmpMap = result.employeeRecoveryMap || {};
                 const indexedEmpMap = { ...rawEmpMap };
@@ -3971,7 +4008,7 @@ export default {
                 employeeRecoveryMap.value = indexedEmpMap;
                 
                 // Debug logging
-                // console.log('[fetchDeptRecoveryPercentages]:', rawEmpMap);
+                console.log('[fetchDeptEmpRecoveryPercentages]:', rawEmpMap);
                 recoveryMapVersion.value++;
             } catch (err) {
                 console.error('Error fetching batch recovery percentages:', err);
