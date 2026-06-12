@@ -1055,15 +1055,21 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     Object.keys(groupedData).forEach(locationId => {
                         Object.keys(groupedData[locationId].departments).forEach(departmentId => {
                             const dept = groupedData[locationId].departments[departmentId];
-                            
-                            // Convert unique_bags Set to count
+
+                            // Convert unique_bags Set to count AND array
+                            // (array is needed so the frontend can compute a GLOBAL distinct
+                            //  bag count across departments — a bag shared by two departments
+                            //  should only count once in the grand total, but still count
+                            //  toward each department's own bag_count)
                             const deptBagCount = dept.unique_bags.size;
-                            
+                            const deptUniqueBagsArray = Array.from(dept.unique_bags);
+
                             // Convert employees object to array with counts
                             const employeesArray = Object.values(dept.employees).map(emp => ({
                                 employee_id: emp.employee_id,
                                 name: emp.employee_name,
                                 bag_count: emp.unique_bags.size,
+                                unique_bags_array: Array.from(emp.unique_bags), // ← added
                                 starting_qty: parseFloat(emp.starting_qty.toFixed(4)),
                                 issued_qty: parseFloat(emp.issued_qty.toFixed(4)),
                                 loss_qty: parseFloat(emp.loss_qty.toFixed(4)),
@@ -1072,13 +1078,14 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                 issued_pieces: parseFloat(emp.issued_pieces.toFixed(4)),
                                 loss_pieces: parseFloat(emp.loss_pieces.toFixed(4))
                             }));
-            
+
                             // Update department object
                             dept.bag_count = deptBagCount;
+                            dept.unique_bags_array = deptUniqueBagsArray; // ← added
                             dept.employees_array = employeesArray;
                             delete dept.unique_bags; // Remove Set object
-                            delete dept.employees; // Remove employees object since we have employees_array now
-                            
+                            delete dept.employees;   // Remove employees object since we have employees_array now
+
                             // Round quantities for department
                             dept.total_starting_qty = parseFloat(dept.total_starting_qty.toFixed(4));
                             dept.total_issued_qty = parseFloat(dept.total_issued_qty.toFixed(4));
