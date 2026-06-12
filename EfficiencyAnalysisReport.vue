@@ -1156,22 +1156,21 @@ export default {
         });
 
         const totalDeptBagCount = computed(() => {
-            // Count unique bags across all departments
-            const uniqueBags = new Set();
-            selectedDepartmentData.value.forEach(dept => {
-                if (dept.unique_bags_array && Array.isArray(dept.unique_bags_array)) {
-                    dept.unique_bags_array.forEach(bag => uniqueBags.add(bag));
+            // Get the global total unique bags count from location data
+            // The backend calculates this as the count of unique bags across ALL departments
+            if (locations.value && locations.value.length > 0) {
+                const location = locations.value[0];
+                if (location.total_unique_bags !== undefined) {
+                    return location.total_unique_bags;
                 }
-            });
-            // If no unique_bags_array, fallback to summing bag_count
-            if (uniqueBags.size === 0) {
-                let sum = 0;
-                selectedDepartmentData.value.forEach(dept => {
-                    sum += parseInt(dept.bag_count || 0);
-                });
-                return sum;
             }
-            return uniqueBags.size;
+            
+            // Fallback: sum all department bag counts (less accurate but works)
+            let sum = 0;
+            selectedDepartmentData.value.forEach(dept => {
+                sum += parseInt(dept.bag_count || 0);
+            });
+            return sum;
         });
 
         const totalDeptIssuedQtyGold = computed(() => {

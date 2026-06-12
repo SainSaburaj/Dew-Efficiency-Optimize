@@ -896,8 +896,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         ? `AND NVL(CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_repair_order, 'F') = '${repairOrderFilter}'`
                         : '';
             
-                    // SIMPLIFIED SQL - Aggregates quantities at department and employee level with bag COUNT
-                    // Uses Oracle-style outer joins with (+) syntax for NetSuite compatibility
+                    // SIMPLIFIED SQL - Aggregates quantities at department and employee level
+                    // We fetch bag data for deduplication in post-processing
                     let sqlQuery = `
                         SELECT
                             CUSTOMRECORD_JJ_MANUFACTURING_DEPT."ID" AS department_id,
@@ -907,7 +907,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_employee AS employee_id,
                             employee.firstname AS firstname,
                             employee.lastname AS lastname,
-                            COUNT(DISTINCT CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_bagno) AS bag_count,
+                            CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_bagno AS bag_id,
                             SUM(NVL(CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN.custrecord_jj_dir_starting_qty, 0)) AS total_starting_qty,
                             SUM(NVL(CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN.custrecord_jj_issued_quantity, 0)) AS total_issued_qty,
                             SUM(NVL(CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN.custrecord_jj_dir_loss_quantity, 0)) AS total_loss_qty,
@@ -939,10 +939,12 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             LOCATION.name,
                             CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_employee,
                             employee.firstname,
-                            employee.lastname
+                            employee.lastname,
+                            CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_bagno
                         ORDER BY
                             department_id,
-                            employee_id
+                            employee_id,
+                            bag_id
                     `;
             
                     log.debug(logPrefix + " - Query: " + sqlQuery);
@@ -953,6 +955,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     let rawResults = this.runQuery(sqlQuery);
             
                     const groupedData = {};
+                    const globalBagSet = new Set(); // Track all unique bags across all departments
             
                     // Process results and group by location, then department, then employee
                     rawResults.forEach(record => {
@@ -963,8 +966,14 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         const employeeId = record.employee_id;
                         const firstname = record.firstname;
                         const lastname = record.lastname;
+                        const bagId = record.bag_id;
             
                         if (!locationId || !departmentId) return;
+            
+                        // Track globally unique bags
+                        if (bagId) {
+                            globalBagSet.add(bagId);
+                        }
             
                         // Initialize location if not exists
                         if (!groupedData[locationId])
@@ -982,7 +991,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             groupedData[locationId].departments[departmentId] = {
                                 department_id: departmentId,
                                 department_name: departmentName,
-                                bag_count: 0,
+                                unique_bags: new Set(), // Track unique bags per department
                                 total_starting_qty: 0,
                                 total_issued_qty: 0,
                                 total_loss_qty: 0,
@@ -990,13 +999,17 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                 total_balance_pieces: 0,
                                 total_issued_pieces: 0,
                                 total_loss_pieces: 0,
-                                employees: []
+                                employees: {}
                             };
                         }
             
-                        // Aggregate department-level metrics
+                        // Track unique bags for this department
                         const dept = groupedData[locationId].departments[departmentId];
-                        dept.bag_count += parseInt(record.bag_count || 0);
+                        if (bagId) {
+                            dept.unique_bags.add(bagId);
+                        }
+            
+                        // Aggregate department-level metrics
                         dept.total_starting_qty += parseFloat(record.total_starting_qty || 0);
                         dept.total_issued_qty += parseFloat(record.total_issued_qty || 0);
                         dept.total_loss_qty += parseFloat(record.total_loss_qty || 0);
@@ -1008,21 +1021,83 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         // Add employee if exists
                         if (employeeId)
                         {
-                            const fullName = [firstname, lastname].filter(Boolean).join(" ");
-                            dept.employees.push({
-                                employee_id: employeeId,
-                                employee_name: fullName || "Unknown Employee",
-                                bag_count: parseInt(record.bag_count || 0),
-                                starting_qty: parseFloat(record.total_starting_qty || 0),
-                                issued_qty: parseFloat(record.total_issued_qty || 0),
-                                loss_qty: parseFloat(record.total_loss_qty || 0),
-                                scrap_qty: parseFloat(record.total_scrap_qty || 0),
-                                balance_pieces: parseFloat(record.total_balance_pieces || 0),
-                                issued_pieces: parseFloat(record.total_issued_pieces || 0),
-                                loss_pieces: parseFloat(record.total_loss_pieces || 0)
-                            });
+                            if (!dept.employees[employeeId]) {
+                                const fullName = [firstname, lastname].filter(Boolean).join(" ");
+                                dept.employees[employeeId] = {
+                                    employee_id: employeeId,
+                                    employee_name: fullName || "Unknown Employee",
+                                    unique_bags: new Set(), // Track unique bags per employee
+                                    starting_qty: 0,
+                                    issued_qty: 0,
+                                    loss_qty: 0,
+                                    scrap_qty: 0,
+                                    balance_pieces: 0,
+                                    issued_pieces: 0,
+                                    loss_pieces: 0
+                                };
+                            }
+            
+                            const emp = dept.employees[employeeId];
+                            if (bagId) {
+                                emp.unique_bags.add(bagId);
+                            }
+                            emp.starting_qty += parseFloat(record.total_starting_qty || 0);
+                            emp.issued_qty += parseFloat(record.total_issued_qty || 0);
+                            emp.loss_qty += parseFloat(record.total_loss_qty || 0);
+                            emp.scrap_qty += parseFloat(record.total_scrap_qty || 0);
+                            emp.balance_pieces += parseFloat(record.total_balance_pieces || 0);
+                            emp.issued_pieces += parseFloat(record.total_issued_pieces || 0);
+                            emp.loss_pieces += parseFloat(record.total_loss_pieces || 0);
                         }
                     });
+            
+                    // Convert Set objects to counts and employee arrays, maintaining unique bag counts
+                    Object.keys(groupedData).forEach(locationId => {
+                        Object.keys(groupedData[locationId].departments).forEach(departmentId => {
+                            const dept = groupedData[locationId].departments[departmentId];
+                            
+                            // Convert unique_bags Set to count
+                            const deptBagCount = dept.unique_bags.size;
+                            
+                            // Convert employees object to array with counts
+                            const employeesArray = Object.values(dept.employees).map(emp => ({
+                                employee_id: emp.employee_id,
+                                name: emp.employee_name,
+                                bag_count: emp.unique_bags.size,
+                                starting_qty: parseFloat(emp.starting_qty.toFixed(4)),
+                                issued_qty: parseFloat(emp.issued_qty.toFixed(4)),
+                                loss_qty: parseFloat(emp.loss_qty.toFixed(4)),
+                                scrap_qty: parseFloat(emp.scrap_qty.toFixed(4)),
+                                balance_pieces: parseFloat(emp.balance_pieces.toFixed(4)),
+                                issued_pieces: parseFloat(emp.issued_pieces.toFixed(4)),
+                                loss_pieces: parseFloat(emp.loss_pieces.toFixed(4))
+                            }));
+            
+                            // Update department object
+                            dept.bag_count = deptBagCount;
+                            dept.employees_array = employeesArray;
+                            delete dept.unique_bags; // Remove Set object
+                            delete dept.employees; // Remove employees object since we have employees_array now
+                            
+                            // Round quantities for department
+                            dept.total_starting_qty = parseFloat(dept.total_starting_qty.toFixed(4));
+                            dept.total_issued_qty = parseFloat(dept.total_issued_qty.toFixed(4));
+                            dept.total_loss_qty = parseFloat(dept.total_loss_qty.toFixed(4));
+                            dept.total_scrap_qty = parseFloat(dept.total_scrap_qty.toFixed(4));
+                            dept.total_balance_pieces = parseFloat(dept.total_balance_pieces.toFixed(4));
+                            dept.total_issued_pieces = parseFloat(dept.total_issued_pieces.toFixed(4));
+                            dept.total_loss_pieces = parseFloat(dept.total_loss_pieces.toFixed(4));
+                        });
+                    });
+            
+                    // Add global unique bag count to the response
+                    Object.keys(groupedData).forEach(locationId => {
+                        groupedData[locationId].total_unique_bags = globalBagSet.size;
+                        log.debug(logPrefix + " - Location " + locationId + " total_unique_bags", globalBagSet.size);
+                    });
+            
+                    log.debug(logPrefix + " - Global unique bags", globalBagSet.size);
+                    log.debug(logPrefix + " - Final groupedData structure", JSON.stringify(Object.keys(groupedData)));
             
                     // Wax Tree data aggregation (if applicable)
                     if (includeWaxTree)
