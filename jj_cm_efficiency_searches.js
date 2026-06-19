@@ -69,51 +69,153 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
          * @description Efficiency Analysis Search Results
          */
         const efficiencyAnalysisResults = {
-            
+
+            /**
+             * Log governance metrics after query execution
+             * @param {string} queryName - Name/identifier of the query
+             * @param {number} startTime - Start time in milliseconds
+             * @param {number} govBeforeQuery - Governance remaining before query
+             * @param {number} rowCount - Number of rows returned
+             * @param {number|null} duration - Duration in milliseconds
+             */
+            logGovernanceMetrics(queryName, startTime, govBeforeQuery, rowCount, duration) {
+                const endTime = Date.now();
+                duration = duration || (endTime - startTime);
+                const govAfterQuery = runtime.getCurrentScript().getRemainingUsage();
+                const govUsed = govBeforeQuery - govAfterQuery;
+                const govUsagePercent = parseFloat(((1000 - govAfterQuery) / 1000 * 100).toFixed(2));
+
+                const metricsLog = {
+                    query_name: queryName,
+                    execution_start_time: new Date(startTime).toISOString(),
+                    execution_duration_ms: duration,
+                    rows_returned: rowCount,
+                    governance_used: govUsed,
+                    governance_remaining: govAfterQuery,
+                    governance_limit: 1000,
+                    governance_usage_percent: govUsagePercent
+                };
+
+                // log.debug('GOVERNANCE_METRICS - ' + queryName, metricsLog);
+                return metricsLog;
+            },
+
             /**
              * Execute a SQL query and return results using query.create API
              * @param {string} sqlQuery - The SQL query to execute
+             * @param {string} queryName - Name/identifier of the query for logging
              * @returns {Array} - Array of query results as objects
              */
-            runQuery(sqlQuery) {
-                try {
-                    if (!sqlQuery) {
+            runQuery(sqlQuery, queryName) {
+                queryName = queryName || 'UnnamedQuery';
+                
+                try
+                {
+                    if (!sqlQuery)
+                    {
                         log.error('runQuery - ERROR: sqlQuery is null or undefined');
                         return [];
                     }
-                    log.debug('runQuery - Executing SuiteQL', { queryLength: sqlQuery.length });
+
+                    const startTime = Date.now();
+                    const govBeforeQuery = runtime.getCurrentScript().getRemainingUsage();
+
+                    // log.debug('runQuery - Starting: ' + queryName, { 
+                    //     queryLength: sqlQuery.length,
+                    //     governance_before: govBeforeQuery,
+                    //     start_time: new Date(startTime).toISOString()
+                    // });
+
                     const results = [];
                     const PAGE_SIZE = 1000;
                     let pageIndex = 0;
                     let pagedData;
-            
-                    do {
-                        pagedData = query.runSuiteQLPaged({
-                            query: sqlQuery,
-                            pageSize: PAGE_SIZE
-                        });
-            
-                        if (pageIndex === 0 && pagedData.pageRanges.length === 0) {
+                    const pageMetrics = []; // Track governance per page
+                    
+                    pagedData = query.runSuiteQLPaged({
+                        query: sqlQuery,
+                        pageSize: PAGE_SIZE
+                    });
+                    
+                    do
+                    {
+                        const pageStartGov = runtime.getCurrentScript().getRemainingUsage();
+                        const pageStartTime = Date.now();
+
+                        if (pageIndex === 0 && pagedData.pageRanges.length === 0)
+                        {
+                            // log.debug(queryName + ' - No data returned', { pageRanges: 0 });
                             break;
                         }
-            
+
                         const page = pagedData.fetch({ index: pageIndex });
                         const mapped = page.data.asMappedResults();
-                        for (let i = 0; i < mapped.length; i++) {
+                        const pageRowCount = mapped.length;
+                        
+                        for (let i = 0; i < mapped.length; i++)
+                        {
                             results.push(mapped[i]);
                         }
+                        
+                        const pageEndGov = runtime.getCurrentScript().getRemainingUsage();
+                        const pageGovUsed = pageStartGov - pageEndGov;
+                        const pageLoadTime = Date.now() - pageStartTime;
+                        
+                        // Log per-page metrics
+                        const pageMetric = {
+                            page_index: pageIndex,
+                            rows_in_page: pageRowCount,
+                            governance_used_this_page: pageGovUsed,
+                            governance_remaining: pageEndGov,
+                            page_load_time_ms: pageLoadTime,
+                            timestamp: new Date(pageStartTime).toISOString()
+                        };
+                        pageMetrics.push(pageMetric);
+                        
+                        // log.debug(queryName + ' - Page ' + pageIndex + ' loaded', pageMetric);
+                        
                         pageIndex++;
                     } while (pagedData && pageIndex < pagedData.pageRanges.length);
-            
-                    log.debug('runQuery - Results Count', results.length);
+
+                    // Log final summary with all page metrics
+                    const finalGov = runtime.getCurrentScript().getRemainingUsage();
+                    const totalGovUsed = govBeforeQuery - finalGov;
+                    const totalLoadTime = Date.now() - startTime;
+                    
+                    const summaryMetrics = {
+                        query_name: queryName,
+                        execution_start_time: new Date(startTime).toISOString(),
+                        execution_duration_ms: totalLoadTime,
+                        total_rows_returned: results.length,
+                        total_pages_loaded: pageIndex,
+                        governance_used_total: totalGovUsed,
+                        governance_remaining: finalGov,
+                        governance_limit: 1000,
+                        governance_usage_percent: parseFloat(((1000 - finalGov) / 1000 * 100).toFixed(2)),
+                        page_details: pageMetrics
+                    };
+                    
+                    // log.debug('GOVERNANCE_METRICS - ' + queryName, summaryMetrics);
+
                     return results;
-                } catch (error) {
-                    log.error('runQuery - Error', error);
+                } catch (error)
+                {
+                    log.error('runQuery - Error in ' + queryName, error);
                     log.error('runQuery - SQL Query was', sqlQuery ? sqlQuery.substring(0, 500) : 'NULL');
+                    
+                    // Log governance even on error
+                    const errorGov = runtime.getCurrentScript().getRemainingUsage();
+                    const errorGovUsed = govBeforeQuery - errorGov;
+                    log.error(queryName + '_ERROR - Governance at error', {
+                        governance_used: errorGovUsed,
+                        governance_remaining: errorGov,
+                        pages_loaded_before_error: pageIndex
+                    });
+                    
                     return [];
                 }
             },
-            
+
             /**
              * @description Core efficiency-data builder shared by the Overall, Production
              * and Repair Efficiency Analysis reports.
@@ -146,6 +248,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              * @param {boolean} options.includeWaxTree - whether to fetch Wax Tree data
              * @param {string} options.logPrefix - prefix used for log messages so each
              *        report's logs remain distinguishable
+             * @param {string|null} options.departmentId - Filter to specific department (optional)
+             * @param {Array<string>|null} options.employeeIds - Filter to specific employees (optional, array of employee IDs)
              * @returns {Object} - The grouped and cleaned efficiency data
              */
             buildEfficiencyData(location, startDate, endDate, options) {
@@ -154,22 +258,32 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     : null;
                 const includeWaxTree = !!(options && options.includeWaxTree);
                 const logPrefix = (options && options.logPrefix) || 'getEfficiencyData';
- 
-                try {
-                    if (!startDate || !endDate) {
+                const departmentId = (options && options.departmentId) || null;
+                let employeeIds = (options && options.employeeIds && Array.isArray(options.employeeIds) && options.employeeIds.length > 0)
+                    ? options.employeeIds : null;
+                
+                // Also handle singular employeeId parameter
+                if (!employeeIds && options && options.employeeId) {
+                    employeeIds = [options.employeeId];
+                }
+
+                try
+                {
+                    if (!startDate || !endDate)
+                    {
                         return {};
                     }
- 
+
                     const sqlStartDate = startDate + ' 00:00:00';
                     const sqlEndDate = endDate + ' 23:59:59';
- 
-                    log.debug(logPrefix + " - Parameters", {
-                        location: location,
-                        startDate: sqlStartDate,
-                        endDate: sqlEndDate,
-                        repairOrderFilter: repairOrderFilter
-                    });
- 
+
+                    // log.debug(logPrefix + " - Parameters", {
+                    //     location: location,
+                    //     startDate: sqlStartDate,
+                    //     endDate: sqlEndDate,
+                    //     repairOrderFilter: repairOrderFilter
+                    // });
+
                     // ── Repair-order condition shared by BOTH queries below ─────────────────
                     //  - Overall analysis    : repairOrderFilter === null -> no filter applied
                     //                           (both production & repair operations included)
@@ -181,7 +295,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     const repairFilterStartingQty = (repairOrderFilter !== null && repairOrderFilter !== undefined)
                         ? `AND NVL(op.custrecord_jj_repair_order, 'F') = '${repairOrderFilter}'`
                         : '';
- 
+
                     // Build the SQL query to fetch departments, employees, bags, and categories
                     let sqlQuery = `
                         SELECT DISTINCT
@@ -199,9 +313,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.sub_category_name) AS sub_category_name,
                             BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.sub_category_id) AS sub_category_id,
                             BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.print_design_name) AS print_design_name,
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.print_design_id) AS print_design_id,
-                            BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.custrecord_jj_received_pieces_info) AS received_pieces_info,
-                            BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.custrecord_jj_loss_pieces_info) AS loss_pieces_info
+                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.print_design_id) AS print_design_id
                         FROM CUSTOMRECORD_JJ_OPERATIONS,
                             (SELECT 
                                 CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN.custrecord_jj_operations AS custrecord_jj_operations_join,
@@ -219,9 +331,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                 CUSTOMRECORD_JJ_BAG_CORE_TRACKING_SUB.sub_category_name AS sub_category_name,
                                 CUSTOMRECORD_JJ_BAG_CORE_TRACKING_SUB.sub_category_id AS sub_category_id,
                                 CUSTOMRECORD_JJ_BAG_CORE_TRACKING_SUB.print_design_name AS print_design_name,
-                                CUSTOMRECORD_JJ_BAG_CORE_TRACKING_SUB.print_design_id AS print_design_id,
-                                CUSTOMRECORD_JJ_BAGCORE_MATERIALS_SUB.custrecord_jj_received_pieces_info,
-                                CUSTOMRECORD_JJ_BAGCORE_MATERIALS_SUB.custrecord_jj_loss_pieces_info
+                                CUSTOMRECORD_JJ_BAG_CORE_TRACKING_SUB.print_design_id AS print_design_id
                             FROM CUSTOMRECORD_JJ_BAG_GENERATION,
                                 (SELECT CUSTOMRECORD_JJ_BAG_CORE_TRACKING."ID" AS id_0,
                                         CUSTOMRECORD_JJ_BAG_CORE_TRACKING."ID" AS id_join,
@@ -237,9 +347,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     WHERE item_0.custitem_jj_category = CUSTOMRECORD_JJ_CATEGORY."ID"(+)) item_SUB
                                 WHERE CUSTOMRECORD_JJ_BAG_CORE_TRACKING.custrecord_jj_bagcore_kt_col = item_SUB."ID"(+)) CUSTOMRECORD_JJ_BAG_CORE_TRACKING_SUB,
                                 (SELECT CUSTOMRECORD_JJ_BAGCORE_MATERIALS."ID" AS id_0,
-                                        CUSTOMRECORD_JJ_BAGCORE_MATERIALS."ID" AS id_join,
-                                        CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_received_pieces_info,
-                                        CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_loss_pieces_info
+                                        CUSTOMRECORD_JJ_BAGCORE_MATERIALS."ID" AS id_join
                                 FROM CUSTOMRECORD_JJ_BAGCORE_MATERIALS) CUSTOMRECORD_JJ_BAGCORE_MATERIALS_SUB
                             WHERE CUSTOMRECORD_JJ_BAG_GENERATION.custrecord_jj_baggen_bagcore = CUSTOMRECORD_JJ_BAG_CORE_TRACKING_SUB.id_0(+)
                                 AND CUSTOMRECORD_JJ_BAG_GENERATION."ID" = CUSTOMRECORD_JJ_BAGCORE_MATERIALS_SUB.id_0(+)
@@ -271,19 +379,43 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             AND BUILTIN.CAST_AS(CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') >= TO_DATE('${sqlStartDate}', 'YYYY-MM-DD HH24:MI:SS')
                             AND BUILTIN.CAST_AS(CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') < TO_DATE('${sqlEndDate}', 'YYYY-MM-DD HH24:MI:SS')
                     `;
- 
+
                     // Add location filter if provided
-                    if (location) {
+                    if (location)
+                    {
                         sqlQuery += `
                             AND CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB.custrecord_jj_mandept_location_crit IN ('${location}')
                         `;
                     }
- 
-                    let rawResults = this.runQuery(sqlQuery);
- 
+
+                    // Add department filter if provided
+                    if (departmentId)
+                    {
+                        sqlQuery += `
+                            AND CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB."ID" = '${departmentId}'
+                        `;
+                    }
+
+                    // Add employee filter if provided (supports multiple employees)
+                    if (employeeIds)
+                    {
+                        const empIdList = employeeIds.map(id => `'${id}'`).join(', ');
+                        sqlQuery += `
+                            AND CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_employee IN (${empIdList})
+                        `;
+                    }
+
+                    // // loop through the sqlQuery string and log each 2500 characters untill the end of the string (to avoid log truncation)
+                    // for (let i = 0; i < sqlQuery.length; i += 2500)
+                    // {
+                    //     log.debug(logPrefix + ' - buildEfficiencyData SQL Query Part', sqlQuery.substring(i, i + 2500));
+                    // }
+
+                    let rawResults = this.runQuery(sqlQuery, logPrefix + '_MainOperationsQuery');
+
                     const groupedData = {};
                     const deptPiecesMap = {};
- 
+
                     rawResults.forEach(record => {
                         const locationId = record.location_id;
                         const departmentId = record.department_id;
@@ -296,23 +428,26 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         const subCategoryId = record.sub_category_id;
                         const printDesignName = record.print_design_name;
                         const printDesignId = record.print_design_id;
- 
+
                         if (!locationId || !departmentId) return;
- 
+
                         // Aggregate pieces data per department
-                        if (!deptPiecesMap[departmentId]) {
+                        if (!deptPiecesMap[departmentId])
+                        {
                             deptPiecesMap[departmentId] = { received_pieces_info: 0, loss_pieces_info: 0 };
                         }
                         deptPiecesMap[departmentId].received_pieces_info += parseFloat(record.received_pieces_info || 0);
                         deptPiecesMap[departmentId].loss_pieces_info += parseFloat(record.loss_pieces_info || 0);
- 
+
                         // Initialize location if not exists
-                        if (!groupedData[locationId]) {
+                        if (!groupedData[locationId])
+                        {
                             groupedData[locationId] = { location_name: record.location_name, departments: {} };
                         }
- 
+
                         // Initialize department if not exists
-                        if (!groupedData[locationId].departments[departmentId]) {
+                        if (!groupedData[locationId].departments[departmentId])
+                        {
                             groupedData[locationId].departments[departmentId] = {
                                 department_id: departmentId,
                                 department_name: record.department_name,
@@ -326,30 +461,37 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                 loss_pieces_info: 0
                             };
                         }
- 
+
                         // Add unique bag to department
                         if (bagName) groupedData[locationId].departments[departmentId].unique_bags.add(bagName);
- 
+
                         // Add unique category to department
-                        if (categoryName) {
+                        if (categoryName)
+                        {
                             groupedData[locationId].departments[departmentId].unique_categories.add(categoryName);
-                            if (printDesignName) {
+                            if (printDesignName)
+                            {
                                 groupedData[locationId].departments[departmentId].category_print_design_map[categoryName] = printDesignName;
                             }
-                            if (printDesignId) {
+                            if (printDesignId)
+                            {
                                 groupedData[locationId].departments[departmentId].category_print_design_id_map[categoryName] = printDesignId;
                             }
-                            if (bagName) {
-                                if (!groupedData[locationId].departments[departmentId].category_bags_map[categoryName]) {
+                            if (bagName)
+                            {
+                                if (!groupedData[locationId].departments[departmentId].category_bags_map[categoryName])
+                                {
                                     groupedData[locationId].departments[departmentId].category_bags_map[categoryName] = {};
                                 }
                                 groupedData[locationId].departments[departmentId].category_bags_map[categoryName][bagName] = { id: bagId, printDesign: printDesignName, printDesignId: printDesignId, subCategoryName: subCategoryName, categoryId: categoryId, subCategoryId: subCategoryId };
                             }
                         }
- 
+
                         // Add employee to department if employee exists
-                        if (employeeId) {
-                            if (!groupedData[locationId].departments[departmentId].employees[employeeId]) {
+                        if (employeeId)
+                        {
+                            if (!groupedData[locationId].departments[departmentId].employees[employeeId])
+                            {
                                 const fullName = [record.firstname, record.lastname].filter(Boolean).join(" ");
                                 groupedData[locationId].departments[departmentId].employees[employeeId] = {
                                     employee_id: employeeId,
@@ -363,18 +505,23 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             }
                             // Add unique bag to employee
                             if (bagName) groupedData[locationId].departments[departmentId].employees[employeeId].unique_bags.add(bagName);
- 
+
                             // Add unique category to employee
-                            if (categoryName) {
+                            if (categoryName)
+                            {
                                 groupedData[locationId].departments[departmentId].employees[employeeId].unique_categories.add(categoryName);
-                                if (printDesignName) {
+                                if (printDesignName)
+                                {
                                     groupedData[locationId].departments[departmentId].employees[employeeId].category_print_design_map[categoryName] = printDesignName;
                                 }
-                                if (printDesignId) {
+                                if (printDesignId)
+                                {
                                     groupedData[locationId].departments[departmentId].employees[employeeId].category_print_design_id_map[categoryName] = printDesignId;
                                 }
-                                if (bagName) {
-                                    if (!groupedData[locationId].departments[departmentId].employees[employeeId].category_bags_map[categoryName]) {
+                                if (bagName)
+                                {
+                                    if (!groupedData[locationId].departments[departmentId].employees[employeeId].category_bags_map[categoryName])
+                                    {
                                         groupedData[locationId].departments[departmentId].employees[employeeId].category_bags_map[categoryName] = {};
                                     }
                                     groupedData[locationId].departments[departmentId].employees[employeeId].category_bags_map[categoryName][bagName] = { id: bagId, printDesign: printDesignName, printDesignId: printDesignId, subCategoryName: subCategoryName, categoryId: categoryId, subCategoryId: subCategoryId };
@@ -382,7 +529,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             }
                         }
                     });
- 
+
                     // Convert employees object to array and bags Set to count for each department and employee
                     Object.keys(groupedData).forEach(locationId => {
                         Object.keys(groupedData[locationId].departments).forEach(departmentId => {
@@ -449,7 +596,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     employee_id: emp.employee_id,
                                     name: emp.name,
                                     bag_count: emp.unique_bags.size,
-                                    unique_bags_array: Array.from(emp.unique_bags),
+                                    // unique_bags_array: Array.from(emp.unique_bags),
                                     category_count: emp.unique_categories.size,
                                     unique_categories_array: Array.from(emp.unique_categories),
                                     category_print_design_map: emp.category_print_design_map,
@@ -467,7 +614,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     categories: []
                                 };
                             });
- 
+
                             dept.bag_count = dept.unique_bags.size;
                             dept.unique_bags_array = Array.from(dept.unique_bags);
                             dept.category_count = dept.unique_categories.size;
@@ -486,24 +633,26 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             delete dept.category_bags_map;
                         });
                     });
- 
+
                     // Set starting_qty to 0 for all departments
                     Object.keys(groupedData).forEach(locationId => {
                         Object.keys(groupedData[locationId].departments).forEach(departmentId => {
                             groupedData[locationId].departments[departmentId].starting_qty = 0;
                         });
                     });
- 
+
                     // Fetch starting_qty for each department
-                    try {
+                    try
+                    {
                         const deptIds = [];
                         Object.keys(groupedData).forEach(locationId => {
                             Object.keys(groupedData[locationId].departments).forEach(departmentId => {
                                 deptIds.push(departmentId);
                             });
                         });
- 
-                        if (deptIds.length > 0) {
+
+                        if (deptIds.length > 0)
+                        {
                             // purity_sub BOM join removed — purity is resolved separately via search.create below,
                             // which is faster and avoids the 5-table BOM chain running per operation row.
                             let startingQtyQuery = `
@@ -558,12 +707,19 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     ${repairFilterStartingQty}
                                     AND BUILTIN.CAST_AS(op.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') >= TO_DATE('${sqlStartDate}', 'YYYY-MM-DD HH24:MI:SS')
                                     AND BUILTIN.CAST_AS(op.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') < TO_DATE('${sqlEndDate}', 'YYYY-MM-DD HH24:MI:SS')
+                                    ${departmentId ? `AND op.custrecord_jj_oprtns_department = '${departmentId}'` : ''}
+                                    ${employeeIds ? `AND op.custrecord_jj_oprtns_employee IN (${employeeIds.map(id => `'${id}'`).join(', ')})` : ''}
                                 GROUP BY op.custrecord_jj_oprtns_department, op.custrecord_jj_oprtns_employee, BUILTIN.DF(printdesign.custitem_jj_category), NVL(bag.altname, bag.name)
                                 ORDER BY 1, 2, 3, 4
                             `;
- 
-                            let startingQtyResults = this.runQuery(startingQtyQuery);
- 
+
+                            let startingQtyResults = this.runQuery(startingQtyQuery, logPrefix + '_StartingQtyQuery');
+
+                            // loop through the sqlQuery string and log each 2500 characters untill the end of the string (to avoid log truncation)
+                            for (let i = 0; i < startingQtyQuery.length; i += 2500) {
+                                log.debug(logPrefix + ' - buildEfficiencyData Starting Qty Query Part', startingQtyQuery.substring(i, i + 2500));
+                            }
+
                             // Create maps for department-level and category-level data
                             const startingQtyMap = {};
                             const lossQtyMap = {};
@@ -571,7 +727,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             const categoryBagQtyMap = {};
                             const employeeCategoryQtyMap = {};
                             const employeeLevelMap = {};
- 
+
                             startingQtyResults.forEach(record => {
                                 const deptId = record.department_id;
                                 const employeeId = record.employee_id;
@@ -579,7 +735,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                 const bagName = record.bag_name || '';
                                 const deptCatKey = `${deptId}_${category}`;
                                 const deptCatBagKey = `${deptId}_${category}_${bagName}`;
- 
+
                                 const qtyData = {
                                     starting_qty_gold: parseFloat(record.starting_qty_gold || 0),
                                     starting_qty_diamond: parseFloat(record.starting_qty_diamond || 0),
@@ -598,48 +754,54 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     loss_pieces_info: parseFloat(record.loss_pieces_info || 0)
                                 };
                                 const metalPurityPercent = 0; // resolved later via search.create purity lookup
- 
+
                                 // **ALWAYS: Accumulate department-level totals (regardless of employee)**
-                                if (!startingQtyMap[deptId]) {
+                                if (!startingQtyMap[deptId])
+                                {
                                     startingQtyMap[deptId] = 0;
                                     lossQtyMap[deptId] = 0;
                                 }
                                 startingQtyMap[deptId] += qtyData.starting_qty_gold + qtyData.starting_qty_diamond;
                                 lossQtyMap[deptId] += qtyData.loss_qty_gold + qtyData.loss_qty_diamond;
- 
+
                                 // **ALWAYS: Accumulate category-level data (aggregate across bags)**
-                                if (!categoryQtyMap[deptCatKey]) {
+                                if (!categoryQtyMap[deptCatKey])
+                                {
                                     categoryQtyMap[deptCatKey] = { starting_qty_gold: 0, starting_qty_diamond: 0, issued_qty_gold: 0, issued_qty_diamond: 0, loss_qty_gold: 0, loss_qty_diamond: 0, scrap_qty_gold: 0, scrap_qty_diamond: 0, balance_qty_gold: 0, balance_qty_diamond: 0, starting_pieces_info: 0, issued_pieces_info: 0, scrap_pieces_info: 0, balance_pieces_info: 0, loss_pieces_info: 0 };
                                 }
                                 Object.keys(qtyData).forEach(k => { categoryQtyMap[deptCatKey][k] += qtyData[k]; });
- 
+
                                 // **ALWAYS: Store per-bag qty data keyed by deptId_category_bagName**
-                                if (bagName) {
-                                    if (!categoryBagQtyMap[deptCatBagKey]) {
+                                if (bagName)
+                                {
+                                    if (!categoryBagQtyMap[deptCatBagKey])
+                                    {
                                         categoryBagQtyMap[deptCatBagKey] = { starting_qty_gold: 0, starting_qty_diamond: 0, issued_qty_gold: 0, issued_qty_diamond: 0, loss_qty_gold: 0, loss_qty_diamond: 0, scrap_qty_gold: 0, scrap_qty_diamond: 0, balance_qty_gold: 0, balance_qty_diamond: 0, starting_pieces_info: 0, issued_pieces_info: 0, scrap_pieces_info: 0, balance_pieces_info: 0, loss_pieces_info: 0, metal_purity_percent: 0 };
                                     }
                                     Object.keys(qtyData).forEach(k => { categoryBagQtyMap[deptCatBagKey][k] += qtyData[k]; });
                                     // purity is a constant per bag — take the max (non-zero wins)
                                     if (metalPurityPercent > 0) categoryBagQtyMap[deptCatBagKey].metal_purity_percent = metalPurityPercent;
                                 }
- 
+
                                 // **ONLY IF EMPLOYEE EXISTS: Process employee-level data**
                                 if (!employeeId) return;
- 
+
                                 const empCatKey = `${deptId}_${employeeId}_${category}`;
                                 const empKey = `${deptId}_${employeeId}`;
- 
+
                                 // Store employee-category-level data (only if employee exists)
-                                if (!employeeCategoryQtyMap[empCatKey]) {
+                                if (!employeeCategoryQtyMap[empCatKey])
+                                {
                                     employeeCategoryQtyMap[empCatKey] = { starting_qty_gold: 0, starting_qty_diamond: 0, issued_qty_gold: 0, issued_qty_diamond: 0, loss_qty_gold: 0, loss_qty_diamond: 0, scrap_qty_gold: 0, scrap_qty_diamond: 0, balance_qty_gold: 0, balance_qty_diamond: 0, starting_pieces_info: 0, issued_pieces_info: 0, scrap_pieces_info: 0, balance_pieces_info: 0, loss_pieces_info: 0 };
                                 }
                                 Object.keys(qtyData).forEach(k => { employeeCategoryQtyMap[empCatKey][k] += qtyData[k]; });
- 
+
                                 // Initialize employee-level aggregation
-                                if (!employeeLevelMap[empKey]) {
+                                if (!employeeLevelMap[empKey])
+                                {
                                     employeeLevelMap[empKey] = { starting_qty: 0, loss_qty: 0, categories: [] };
                                 }
- 
+
                                 // Add per-bag entry to employee categories
                                 employeeLevelMap[empKey].categories.push({
                                     category_name: category,
@@ -647,15 +809,16 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     metal_purity_percent: metalPurityPercent,
                                     ...qtyData
                                 });
- 
+
                                 // Accumulate employee-level totals
                                 employeeLevelMap[empKey].starting_qty += qtyData.starting_qty_gold + qtyData.starting_qty_diamond;
                                 employeeLevelMap[empKey].loss_qty += qtyData.loss_qty_gold + qtyData.loss_qty_diamond;
                             });
- 
+
                             // Fetch metal purity via the print design item (assembly item) → CUSTITEM_JJ_METAL_QUALITY
                             // This is the same approach used in getItemClassesAndPurity()
-                            try {
+                            try
+                            {
                                 // Collect all unique print design item IDs across all depts/categories
                                 const itemIdToBagsMap = {}; // itemId → [{ deptId, cat, bagName }]
                                 Object.keys(groupedData).forEach(locId => {
@@ -672,8 +835,19 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     });
                                 });
                                 const allItemIds = Object.keys(itemIdToBagsMap);
-                                if (allItemIds.length > 0) {
+                                if (allItemIds.length > 0)
+                                {
                                     const itemPurityMap = {}; // itemId → purity number
+                                    const puritySearchStartTime = Date.now();
+                                    const puritySearchGovBefore = runtime.getCurrentScript().getRemainingUsage();
+                                    
+                                    // log.debug(logPrefix + ' - Purity Search Starting', {
+                                    //     item_ids_count: allItemIds.length,
+                                    //     governance_before: puritySearchGovBefore,
+                                    //     start_time: new Date(puritySearchStartTime).toISOString()
+                                    // });
+                                    
+                                    let purityResultCount = 0;
                                     search.create({
                                         type: search.Type.ITEM,
                                         filters: [['internalid', 'anyof', allItemIds]],
@@ -685,8 +859,21 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                         const itemId = r.getValue('internalid');
                                         const purityValue = r.getValue('custitem_jj_metal_purity_percent') || '0';
                                         itemPurityMap[itemId] = parseFloat(purityValue) || 0;
+                                        purityResultCount++;
                                         return true;
                                     });
+                                    
+                                    // Log governance for purity search during execution
+                                    const puritySearchEndTime = Date.now();
+                                    const puritySearchGovAfter = runtime.getCurrentScript().getRemainingUsage();
+                                    const puritySearchGovUsed = puritySearchGovBefore - puritySearchGovAfter;
+                                    
+                                    // log.debug(logPrefix + ' - Purity Search Complete', {
+                                    //     results_count: purityResultCount,
+                                    //     execution_time_ms: puritySearchEndTime - puritySearchStartTime,
+                                    //     governance_used: puritySearchGovUsed,
+                                    //     governance_remaining: puritySearchGovAfter
+                                    // });
                                     // Apply purity to all bags in each category
                                     Object.keys(itemIdToBagsMap).forEach(itemId => {
                                         const purity = itemPurityMap[itemId] || 0;
@@ -702,22 +889,34 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                             const dept = Object.values(groupedData).reduce((found, loc) => found || loc.departments[deptId], null);
                                             if (!dept) return;
                                             const itemId = dept.category_bag_print_design_id_map?.[cat.category_name]?.[cat.bag_name];
-                                            if (itemId && itemPurityMap[itemId] !== undefined) {
+                                            if (itemId && itemPurityMap[itemId] !== undefined)
+                                            {
                                                 cat.metal_purity_percent = itemPurityMap[itemId];
                                             }
                                         });
                                     });
                                 }
-                            } catch (purityErr) {
+                            } catch (purityErr)
+                            {
                                 log.error(logPrefix + ' - Purity Lookup Error', purityErr);
                             }
- 
+
                             // Wax Tree data for Casting, Tree Cutting/Cleaning, Grinding —
                             // only fetched for reports that include it (Overall & Production).
                             // Single query with OR across all 3 date fields.
                             // Per record: if a date matches the UI range, take its corresponding weight; otherwise 0.
-                            if (includeWaxTree) {
-                                try {
+                            if (includeWaxTree)
+                            {
+                                try
+                                {
+                                    const waxTreeQueryStartTime = Date.now();
+                                    const waxTreeQueryGovBefore = runtime.getCurrentScript().getRemainingUsage();
+                                    
+                                    // log.debug(logPrefix + ' - Wax Tree Query Starting', {
+                                    //     governance_before: waxTreeQueryGovBefore,
+                                    //     start_time: new Date(waxTreeQueryStartTime).toISOString()
+                                    // });
+                                    
                                     let waxTreeQuery = `
                                         SELECT
                                             SUM(CASE WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_final_tree_weight, 0) ELSE 0 END) AS casting_qty,
@@ -738,7 +937,25 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                               )
                                     `;
                                     let waxTreeResults = query.runSuiteQL({ query: waxTreeQuery }).asMappedResults();
-                                    if (waxTreeResults && waxTreeResults.length > 0) {
+
+                                    // // loop through the sqlQuery string and log each 2500 characters untill the end of the string (to avoid log truncation)
+                                    // for (let i = 0; i < waxTreeQuery.length; i += 2500) {
+                                    //     log.debug(logPrefix + ' - buildEfficiencyData Wax Tree Query Part', waxTreeQuery.substring(i, i + 2500));
+                                    // }
+                                    
+                                    // Log governance for wax tree query during execution
+                                    const waxTreeQueryEndTime = Date.now();
+                                    const waxTreeQueryGovAfter = runtime.getCurrentScript().getRemainingUsage();
+                                    const waxTreeQueryGovUsed = waxTreeQueryGovBefore - waxTreeQueryGovAfter;
+                                    
+                                    // log.debug(logPrefix + ' - Wax Tree Query Complete', {
+                                    //     results_count: (waxTreeResults ? waxTreeResults.length : 0),
+                                    //     execution_time_ms: waxTreeQueryEndTime - waxTreeQueryStartTime,
+                                    //     governance_used: waxTreeQueryGovUsed,
+                                    //     governance_remaining: waxTreeQueryGovAfter
+                                    // });
+                                    if (waxTreeResults && waxTreeResults.length > 0)
+                                    {
                                         const row = waxTreeResults[0];
                                         const waxDeptMap = {
                                             [CASTING]: { production: parseFloat(row.casting_qty || 0), loss: parseFloat(row.casting_loss || 0), received: parseFloat(row.casting_received_qty || 0) },
@@ -748,7 +965,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                         Object.keys(waxDeptMap).forEach(function (deptId) {
                                             Object.keys(groupedData).forEach(function (locId) {
                                                 const deptKey = String(deptId);
-                                                if (groupedData[locId].departments[deptKey]) {
+                                                if (groupedData[locId].departments[deptKey])
+                                                {
                                                     groupedData[locId].departments[deptKey].wax_tree_actual_production_gold = waxDeptMap[deptId].production;
                                                     groupedData[locId].departments[deptKey].wax_tree_loss_gold = waxDeptMap[deptId].loss;
                                                     groupedData[locId].departments[deptKey].wax_tree_received_qty_gold = waxDeptMap[deptId].received;
@@ -756,11 +974,12 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                             });
                                         });
                                     }
-                                } catch (waxErr) {
+                                } catch (waxErr)
+                                {
                                     log.error(logPrefix + ' - Wax Tree Error', waxErr);
                                 }
                             }
- 
+
                             Object.keys(groupedData).forEach(locationId => {
                                 Object.keys(groupedData[locationId].departments).forEach(departmentId => {
                                     groupedData[locationId].departments[departmentId].starting_qty = startingQtyMap[departmentId] || 0;
@@ -770,11 +989,12 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     groupedData[locationId].departments[departmentId].employee_category_qty_map = employeeCategoryQtyMap;
                                     groupedData[locationId].departments[departmentId].received_pieces_info = deptPiecesMap[departmentId]?.received_pieces_info || 0;
                                     groupedData[locationId].departments[departmentId].loss_pieces_info = deptPiecesMap[departmentId]?.loss_pieces_info || 0;
- 
+
                                     groupedData[locationId].departments[departmentId].employees_array.forEach(emp => {
                                         const empKey = `${departmentId}_${emp.employee_id}`;
                                         const empLevelData = employeeLevelMap[empKey];
-                                        if (empLevelData) {
+                                        if (empLevelData)
+                                        {
                                             emp.starting_qty = empLevelData.starting_qty;
                                             emp.loss_qty = empLevelData.loss_qty;
                                             emp.categories = empLevelData.categories;
@@ -782,20 +1002,23 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     });
                                 });
                             });
-                        } else {
+                        } else
+                        {
                             log.debug(logPrefix + " - Starting Qty Fetch", "No departments found in groupedData");
                         }
-                    } catch (err) {
+                    } catch (err)
+                    {
                         log.error(logPrefix + " - Starting Qty Error", err);
                     }
- 
+
                     return groupedData;
-                } catch (error) {
+                } catch (error)
+                {
                     log.error(logPrefix + " - Error", error);
                     return {};
                 }
             },
-            
+
             /**
              * Retrieves efficiency data for ALL operations (production + repair) across
              * all departments. Used for the Overall Efficiency Analysis page.
@@ -814,7 +1037,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     logPrefix: 'getOverallEfficiencyData'
                 });
             },
- 
+
 
             /**
              * Retrieves efficiency data for PRODUCTION (non-repair) operations only.
@@ -834,7 +1057,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     logPrefix: 'getProductionEfficiencyData'
                 });
             },
- 
+
             /**
              * Retrieves efficiency data for REPAIR operations only.
              * Excludes Wax Tree data (not applicable to repair orders).
@@ -887,22 +1110,45 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                 const includeWaxTree = !!(options && options.includeWaxTree);
                 const logPrefix = (options && options.logPrefix) || 'buildSummaryEfficiencyData';
 
-                try {
-                    if (!startDate || !endDate) {
+                try
+                {
+                    if (!startDate || !endDate)
+                    {
                         return {};
                     }
 
                     const sqlStartDate = startDate + ' 00:00:00';
-                    const sqlEndDate   = endDate   + ' 23:59:59';
+                    const sqlEndDate = endDate + ' 23:59:59';
 
-                    log.debug(logPrefix + ' - Parameters', {
-                        location, startDate: sqlStartDate, endDate: sqlEndDate, repairOrderFilter
-                    });
+                    // log.debug(logPrefix + ' - Parameters', {
+                    //     location, startDate: sqlStartDate, endDate: sqlEndDate, repairOrderFilter
+                    // });
 
                     // Repair-order filter injected into WHERE (same logic as _buildEfficiencyData)
                     const repairFilterMain = (repairOrderFilter !== null && repairOrderFilter !== undefined)
                         ? `AND NVL(op.custrecord_jj_repair_order, 'F') = '${repairOrderFilter}'`
                         : '';
+
+                    const reqDepartmentId = options?.departmentId;
+                    const reqEmployeeId = options?.employeeId;
+
+                    // If departmentId is provided, we fetch employees. 
+                    // If employeeId is provided, we fetch bags (and naturally we must group by employee too).
+                    const fetchEmployees = !!(reqDepartmentId || reqEmployeeId);
+                    const fetchBags = !!reqEmployeeId;
+
+                    const employeeSelect = fetchEmployees ? `
+                            BUILTIN_RESULT.TYPE_INTEGER(op.custrecord_jj_oprtns_employee)         AS employee_id
+                            , BUILTIN_RESULT.TYPE_STRING(emp.firstname)                              AS firstname
+                            , BUILTIN_RESULT.TYPE_STRING(emp.lastname)                               AS lastname
+                    `: '';
+
+                    const employeeGroup = fetchEmployees ? `, op.custrecord_jj_oprtns_employee, emp.firstname, emp.lastname` : ``;
+                    const bagSelect = `, BUILTIN_RESULT.TYPE_INTEGER(op.custrecord_jj_oprtns_bagno)            AS bag_id`;
+                    const bagGroup = `, op.custrecord_jj_oprtns_bagno`;
+
+                    const deptFilter = reqDepartmentId ? `AND op.custrecord_jj_oprtns_department = '${reqDepartmentId}'` : ``;
+                    const empFilter = reqEmployeeId ? `AND op.custrecord_jj_oprtns_employee = '${reqEmployeeId}'` : ``;
 
                     // ── SINGLE AGGREGATING QUERY ─────────────────────────────────────────────────
                     // Groups by dept + employee + bag + print-design so that purity can be resolved
@@ -914,42 +1160,190 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             BUILTIN_RESULT.TYPE_INTEGER(op.custrecord_jj_oprtns_department)      AS department_id,
                             BUILTIN_RESULT.TYPE_STRING(dept.name)                                  AS department_name,
                             BUILTIN_RESULT.TYPE_INTEGER(dept.custrecord_jj_mandept_location)       AS location_id,
-                            BUILTIN_RESULT.TYPE_STRING(loc.name)                                   AS location_name,
-                            BUILTIN_RESULT.TYPE_INTEGER(op.custrecord_jj_oprtns_employee)         AS employee_id,
-                            BUILTIN_RESULT.TYPE_STRING(emp.firstname)                              AS firstname,
-                            BUILTIN_RESULT.TYPE_STRING(emp.lastname)                               AS lastname,
-                            BUILTIN_RESULT.TYPE_INTEGER(op.custrecord_jj_oprtns_bagno)            AS bag_id,
-                            BUILTIN_RESULT.TYPE_INTEGER(bagcore.custrecord_jj_bagcore_kt_col)     AS print_design_id,
-                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN NVL(dir.custrecord_jj_dir_starting_qty,  0) ELSE 0 END) AS starting_qty_gold,
-                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN NVL(dir.custrecord_jj_issued_quantity,    0) ELSE 0 END) AS issued_qty_gold,
-                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN NVL(dir.custrecord_jj_dir_loss_quantity,  0) ELSE 0 END) AS loss_qty_gold,
-                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN NVL(dir.custrecord_jj_scrap_quantity,     0) ELSE 0 END) AS scrap_qty_gold,
-                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN NVL(dir.custrecord_jj_additional_quantity, 0) ELSE 0 END) AS balance_qty_gold,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_dir_starting_qty,  0) ELSE 0 END) AS starting_qty_diamond,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_issued_quantity,    0) ELSE 0 END) AS issued_qty_diamond,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_dir_loss_quantity,  0) ELSE 0 END) AS loss_qty_diamond,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_scrap_quantity,     0) ELSE 0 END) AS scrap_qty_diamond,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_additional_quantity, 0) ELSE 0 END) AS balance_qty_diamond,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_dir_starting_pcs_info,  0) ELSE 0 END) AS starting_pieces_info,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_dir_issued_pieces_info,  0) ELSE 0 END) AS issued_pieces_info,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_dir_scrap_pieces_info,   0) ELSE 0 END) AS scrap_pieces_info,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_dir_balance_pieces_info, 0) ELSE 0 END) AS balance_pieces_info,
-                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN NVL(dir.custrecord_jj_dir_loss_pieces_info,    0) ELSE 0 END) AS loss_pieces_info
+                            BUILTIN_RESULT.TYPE_STRING(loc.name)                                   AS location_name${employeeSelect ? ',' + employeeSelect : ''},
+                            COUNT(DISTINCT op.custrecord_jj_oprtns_bagno) AS bag_count,
+                            
+                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                            NVL(dir.custrecord_jj_dir_starting_qty, 0) + 
+                                NVL(dir.custrecord_jj_issued_quantity, 0)  -
+                                NVL(dir.custrecord_jj_scrap_quantity, 0)  -
+                                NVL(dir.custrecord_jj_additional_quantity, 0)
+                            ELSE 0 END) AS issued_net_wt_gold,
+
+                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                NVL(dir.custrecord_jj_dir_starting_qty, 0) + 
+                                NVL(dir.custrecord_jj_issued_quantity, 0)  -
+                                NVL(dir.custrecord_jj_dir_loss_quantity, 0)  -
+                                NVL(dir.custrecord_jj_scrap_quantity, 0)  -
+                                NVL(dir.custrecord_jj_additional_quantity, 0)
+                            ELSE 0 END) AS received_qty_gold,
+                            
+                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                NVL(dir.custrecord_jj_dir_loss_quantity,  0) 
+                            ELSE 0 END) AS loss_qty_gold,
+
+                            CASE
+                                WHEN SUM(
+                                    CASE
+                                        WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                            NVL(dir.custrecord_jj_dir_starting_qty,0)
+                                            + NVL(dir.custrecord_jj_issued_quantity,0)
+                                            - NVL(dir.custrecord_jj_dir_loss_quantity,0)
+                                            - NVL(dir.custrecord_jj_scrap_quantity,0)
+                                            - NVL(dir.custrecord_jj_additional_quantity,0)
+                                        ELSE 0
+                                    END
+                                ) > 0
+                                THEN
+                                    SUM(
+                                        CASE
+                                            WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')})
+                                            THEN NVL(dir.custrecord_jj_dir_loss_quantity,0)
+                                            ELSE 0
+                                        END
+                                    )
+                                    /
+                                    SUM(
+                                        CASE
+                                            WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                                NVL(dir.custrecord_jj_dir_starting_qty,0)
+                                                + NVL(dir.custrecord_jj_issued_quantity,0)
+                                                - NVL(dir.custrecord_jj_dir_loss_quantity,0)
+                                                - NVL(dir.custrecord_jj_scrap_quantity,0)
+                                                - NVL(dir.custrecord_jj_additional_quantity,0)
+                                            ELSE 0
+                                        END
+                                    ) * 100
+                                ELSE 0
+                            END AS gross_loss_percentage,
+                            
+                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                (NVL(dir.custrecord_jj_dir_starting_qty, 0) + 
+                                NVL(dir.custrecord_jj_issued_quantity, 0)  -
+                                NVL(dir.custrecord_jj_dir_loss_quantity, 0)  -
+                                NVL(dir.custrecord_jj_scrap_quantity, 0)  -
+                                NVL(dir.custrecord_jj_additional_quantity, 0)) * item.custitem_jj_metal_purity_percent / 100
+                            ELSE 0 END) AS pure_weight,
+                            
+                            SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                NVL(dir.custrecord_jj_dir_loss_quantity,  0) * item.custitem_jj_metal_purity_percent / 100
+                            ELSE 0 END) AS pure_loss,
+
+                            CASE
+                                WHEN SUM(
+                                    CASE
+                                        WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                            NVL(dir.custrecord_jj_dir_starting_qty,0)
+                                            + NVL(dir.custrecord_jj_issued_quantity,0)
+                                            - NVL(dir.custrecord_jj_dir_loss_quantity,0)
+                                            - NVL(dir.custrecord_jj_scrap_quantity,0)
+                                            - NVL(dir.custrecord_jj_additional_quantity,0)
+                                        ELSE 0
+                                    END
+                                ) > 0
+                                THEN
+                                    SUM(
+                                        CASE
+                                            WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')})
+                                            THEN NVL(dir.custrecord_jj_dir_loss_quantity,0)
+                                            ELSE 0
+                                        END
+                                    )
+                                    /
+                                    SUM(
+                                        CASE
+                                            WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                                NVL(dir.custrecord_jj_dir_starting_qty,0)
+                                                + NVL(dir.custrecord_jj_issued_quantity,0)
+                                                - NVL(dir.custrecord_jj_dir_loss_quantity,0)
+                                                - NVL(dir.custrecord_jj_scrap_quantity,0)
+                                                - NVL(dir.custrecord_jj_additional_quantity,0)
+                                            ELSE 0
+                                        END
+                                    )
+                                ELSE 0
+                            END AS net_loss_gold,
+                            
+                            CASE
+                                WHEN SUM(
+                                    CASE
+                                        WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                            NVL(dir.custrecord_jj_dir_starting_qty,0)
+                                            + NVL(dir.custrecord_jj_issued_quantity,0)
+                                            - NVL(dir.custrecord_jj_dir_loss_quantity,0)
+                                            - NVL(dir.custrecord_jj_scrap_quantity,0)
+                                            - NVL(dir.custrecord_jj_additional_quantity,0)
+                                        ELSE 0
+                                    END
+                                ) > 0
+                                THEN
+                                    SUM(
+                                        CASE
+                                            WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')})
+                                            THEN NVL(dir.custrecord_jj_dir_loss_quantity,0)
+                                            ELSE 0
+                                        END
+                                    )
+                                    /
+                                    SUM(
+                                        CASE
+                                            WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
+                                                NVL(dir.custrecord_jj_dir_starting_qty,0)
+                                                + NVL(dir.custrecord_jj_issued_quantity,0)
+                                                - NVL(dir.custrecord_jj_dir_loss_quantity,0)
+                                                - NVL(dir.custrecord_jj_scrap_quantity,0)
+                                                - NVL(dir.custrecord_jj_additional_quantity,0)
+                                            ELSE 0
+                                        END
+                                    ) * 100
+                                ELSE 0
+                            END AS net_loss_percentage,
+                            
+                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN
+                            NVL(dir.custrecord_jj_dir_starting_qty, 0) +
+                                NVL(dir.custrecord_jj_issued_quantity, 0)  -
+                                NVL(dir.custrecord_jj_scrap_quantity, 0)  -
+                                NVL(dir.custrecord_jj_additional_quantity, 0)
+                                ELSE 0 END) AS issued_net_wt_diamond,
+                            
+                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN
+                                NVL(dir.custrecord_jj_dir_starting_qty, 0) +
+                                NVL(dir.custrecord_jj_issued_quantity, 0)  -
+                                NVL(dir.custrecord_jj_dir_loss_quantity, 0)  -
+                                NVL(dir.custrecord_jj_scrap_quantity, 0)  -
+                                NVL(dir.custrecord_jj_additional_quantity, 0)
+                            ELSE 0 END) AS received_qty_diamond,
+
+                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN
+                            NVL(dir.custrecord_jj_dir_loss_quantity,  0) 
+                            ELSE 0 END) AS loss_qty_diamond,
+                            
+                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN 
+                                NVL(dir.custrecord_jj_dir_starting_pcs_info,  0) + 
+                                NVL(dir.custrecord_jj_dir_issued_pieces_info,  0) -
+                                NVL(dir.custrecord_jj_dir_scrap_pieces_info,   0) -
+                                NVL(dir.custrecord_jj_dir_balance_pieces_info, 0)
+                            ELSE 0 END) AS received_pieces_info,
+                                
+                            SUM(CASE WHEN item.class = ${DIAMOND_ID} THEN
+                                NVL(dir.custrecord_jj_dir_loss_pieces_info, 0) 
+                            ELSE 0 END) AS loss_pieces_info
+
                         FROM CUSTOMRECORD_JJ_OPERATIONS op
                         LEFT JOIN CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN dir
-                            ON  dir.custrecord_jj_operations = op.ID
+                            ON dir.custrecord_jj_operations = op.ID
                         LEFT JOIN item
                             ON  dir.custrecord_jj_component  = item.ID
                         LEFT JOIN CUSTOMRECORD_JJ_BAG_GENERATION bag
-                            ON  op.custrecord_jj_oprtns_bagno = bag.ID
+                            ON op.custrecord_jj_oprtns_bagno = bag.ID
                         LEFT JOIN CUSTOMRECORD_JJ_BAG_CORE_TRACKING bagcore
-                            ON  bag.custrecord_jj_baggen_bagcore = bagcore.ID
+                            ON bag.custrecord_jj_baggen_bagcore = bagcore.ID
                         LEFT JOIN CUSTOMRECORD_JJ_MANUFACTURING_DEPT dept
-                            ON  op.custrecord_jj_oprtns_department = dept.ID
+                            ON op.custrecord_jj_oprtns_department = dept.ID
                         LEFT JOIN LOCATION loc
-                            ON  dept.custrecord_jj_mandept_location = loc.ID
+                            ON dept.custrecord_jj_mandept_location = loc.ID
                         LEFT JOIN employee emp
-                            ON  op.custrecord_jj_oprtns_employee = emp.ID
+                            ON op.custrecord_jj_oprtns_employee = emp.ID
                         WHERE NVL(op.isinactive,   'F') = 'F'
                             AND NVL(dept.isinactive, 'F') = 'F'
                             AND NVL(emp.isinactive,  'F') = 'F'
@@ -963,189 +1357,180 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             AND BUILTIN.CAST_AS(op.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED')
                                 <  TO_DATE('${sqlEndDate}',   'YYYY-MM-DD HH24:MI:SS')
                             ${location ? `AND dept.custrecord_jj_mandept_location = '${location}'` : ''}
+                            ${deptFilter}
+                            ${empFilter}
                         GROUP BY
                             op.custrecord_jj_oprtns_department,
                             dept.name,
                             dept.custrecord_jj_mandept_location,
-                            loc.name,
-                            op.custrecord_jj_oprtns_employee,
-                            emp.firstname,
-                            emp.lastname,
-                            op.custrecord_jj_oprtns_bagno,
-                            bagcore.custrecord_jj_bagcore_kt_col
+                            loc.name
+                            ${employeeGroup}
                         ORDER BY 1, 5, 8
                     `;
 
-                    let rawResults = this.runQuery(sqlQuery);
-                    log.debug(logPrefix + ' - Raw result count', rawResults.length);
+                    // // loop through the sqlQuery string and log each 2500 characters untill the end of the string (to avoid log truncation)
+                    // for (let i = 0; i < sqlQuery.length; i += 2500)
+                    // {
+                    //     log.debug(logPrefix + ' - SQL Query Part', sqlQuery.substring(i, i + 2500));
+                    // }
 
-                    // ── Purity lookup: collect unique print_design_id values ─────────────────────
-                    const printDesignIds = new Set();
-                    rawResults.forEach(r => {
-                        if (r.print_design_id) printDesignIds.add(String(r.print_design_id));
-                    });
-
-                    const itemPurityMap = {}; // itemId (string) → purity percent (number 0–100)
-                    if (printDesignIds.size > 0) {
-                        try {
-                            search.create({
-                                type: search.Type.ITEM,
-                                filters: [['internalid', 'anyof', Array.from(printDesignIds)]],
-                                columns: [
-                                    search.createColumn({ name: 'internalid' }),
-                                    search.createColumn({ name: 'custitem_jj_metal_purity_percent', label: 'purity' })
-                                ]
-                            }).run().each(r => {
-                                const itemId = r.getValue('internalid');
-                                itemPurityMap[itemId] = parseFloat(r.getValue('custitem_jj_metal_purity_percent') || '0') || 0;
-                                return true;
-                            });
-                        } catch (pErr) {
-                            log.error(logPrefix + ' - Purity Lookup Error', pErr);
-                        }
-                    }
+                    let rawResults = this.runQuery(sqlQuery, logPrefix + '_SummaryQuery');
+                    // log.debug(logPrefix + ' - Raw result count', rawResults.length);
 
                     // ── Build grouped data ───────────────────────────────────────────────────────
-                    const groupedData   = {};
-                    const globalBagSet  = new Set();
+                    const groupedData = {};
+                    // const globalBagSet = new Set();
 
                     rawResults.forEach(record => {
-                        const locationId     = record.location_id;
-                        const locationName   = record.location_name;
-                        const departmentId   = record.department_id;
+                        const locationId = record.location_id;
+                        const locationName = record.location_name;
+                        const departmentId = record.department_id;
                         const departmentName = record.department_name;
-                        const employeeId     = record.employee_id;
-                        const bagId          = record.bag_id;
-                        const printDesignId  = record.print_design_id ? String(record.print_design_id) : null;
-                        const purityFactor   = printDesignId ? (itemPurityMap[printDesignId] || 0) / 100 : 0;
+                        const employeeId = record.employee_id;
+                        const bagId = record.bag_id;
+                        // const printDesignId = record.print_design_id ? String(record.print_design_id) : null;
+                        // const purityFactor = printDesignId ? (itemPurityMap[printDesignId] || 0) / 100 : 0;
 
                         if (!locationId || !departmentId) return;
 
-                        if (bagId) globalBagSet.add(bagId);
+                        // if (bagId) globalBagSet.add(bagId);
 
                         // ── Init location ────────────────────────────────────────────────────────
-                        if (!groupedData[locationId]) {
+                        if (!groupedData[locationId])
+                        {
                             groupedData[locationId] = {
-                                location_id:   locationId,
+                                location_id: locationId,
                                 location_name: locationName,
-                                departments:   {}
+                                departments: {}
                             };
                         }
 
                         // ── Init department ──────────────────────────────────────────────────────
-                        if (!groupedData[locationId].departments[departmentId]) {
+                        if (!groupedData[locationId].departments[departmentId])
+                        {
                             groupedData[locationId].departments[departmentId] = {
-                                department_id:   departmentId,
+                                department_id: departmentId,
                                 department_name: departmentName,
-                                unique_bags:     new Set(),
+                                bag_count: 0,
+                                // unique_bags: new Set(),
 
                                 // Gold / Jewelry accumulators
                                 issued_net_wt_gold: 0,
-                                received_qty_gold:  0,
-                                gross_loss_gold:    0,
-                                pure_weight_gold:   0,
-                                pure_loss_gold:     0,
-                                net_loss_gold:      0,
+                                received_qty_gold: 0,
+                                gross_loss_gold: 0,
+                                pure_weight_gold: 0,
+                                pure_loss_gold: 0,
+                                net_loss_gold: 0,
 
                                 // Diamond accumulators
                                 issued_net_wt_diamond: 0,
-                                received_qty_diamond:  0,
-                                loss_qty_diamond:      0,
+                                received_qty_diamond: 0,
+                                loss_qty_diamond: 0,
 
                                 // Piece counts (diamond)
                                 received_pieces: 0,
-                                loss_pieces:     0,
+                                loss_pieces: 0,
 
                                 employees: {}
                             };
                         }
 
                         const dept = groupedData[locationId].departments[departmentId];
-                        if (bagId) dept.unique_bags.add(bagId);
+                        // if (bagId) dept.unique_bags.add(bagId);
 
                         // ── Qty reads — now guaranteed lowercase by BUILTIN_RESULT wrappers ──────
-                        const sG  = parseFloat(record.starting_qty_gold  || 0);
-                        const iG  = parseFloat(record.issued_qty_gold    || 0);
-                        const lG  = parseFloat(record.loss_qty_gold      || 0);
-                        const scG = parseFloat(record.scrap_qty_gold     || 0);
-                        const bG  = parseFloat(record.balance_qty_gold   || 0);
-
-                        const sD  = parseFloat(record.starting_qty_diamond  || 0);
-                        const iD  = parseFloat(record.issued_qty_diamond    || 0);
-                        const lD  = parseFloat(record.loss_qty_diamond      || 0);
-                        const scD = parseFloat(record.scrap_qty_diamond     || 0);
-                        const bD  = parseFloat(record.balance_qty_diamond   || 0);
-
-                        const sP  = parseFloat(record.starting_pieces_info  || 0);
-                        const iP  = parseFloat(record.issued_pieces_info    || 0);
-                        const scP = parseFloat(record.scrap_pieces_info     || 0);
-                        const bP  = parseFloat(record.balance_pieces_info   || 0);
-                        const lP  = parseFloat(record.loss_pieces_info      || 0);
+                        // const sG = parseFloat(record.starting_qty_gold || 0);
+                        // const iG = parseFloat(record.issued_qty_gold || 0);
+                        // const scG = parseFloat(record.scrap_qty_gold || 0);
+                        // const bG = parseFloat(record.balance_qty_gold || 0);
+                        // const sD = parseFloat(record.starting_qty_diamond || 0);
+                        // const iD = parseFloat(record.issued_qty_diamond || 0);
+                        // const scD = parseFloat(record.scrap_qty_diamond || 0);
+                        // const bD = parseFloat(record.balance_qty_diamond || 0);
+                        // const sP = parseFloat(record.starting_pieces_info || 0);
+                        // const iP = parseFloat(record.issued_pieces_info || 0);
+                        // const scP = parseFloat(record.scrap_pieces_info || 0);
+                        // const bP = parseFloat(record.balance_pieces_info || 0);
 
                         // ── Derived quantities ───────────────────────────────────────────────────
                         // issued_net_wt = (starting + issued) minus what was returned (scrap + balance)
-                        const issuedNetWtG  = sG + iG - scG - bG;
+                        // const issuedNetWtG = sG + iG - scG - bG;
                         // received_qty  = net output produced (total input minus all outflows)
-                        const recvG         = sG + iG - lG - scG - bG;
-                        const pureWtG       = recvG * purityFactor;
-                        const pureLossG     = lG    * purityFactor;
+                        // const recvG = sG + iG - lG - scG - bG;
+                        // const pureWtG = recvG * purityFactor;
+                        // const pureLossG = lG * purityFactor;
+                        // const issuedNetWtD = sD + iD - scD - bD;
+                        // const recvD = sD + iD - lD - scD - bD;
+                        // const receivedPieces = sP + iP - scP - bP;
 
-                        const issuedNetWtD  = sD + iD - scD - bD;
-                        const recvD         = sD + iD - lD - scD - bD;
-
-                        const receivedPieces = sP + iP - scP - bP;
+                        const issuedNetWtG = parseFloat(record.issued_net_wt_gold || 0);
+                        const recvG = parseFloat(record.received_qty_gold || 0);
+                        const lG = parseFloat(record.loss_qty_gold || 0);
+                        const pureWtG = parseFloat(record.pure_weight || 0);
+                        const pureLossG = parseFloat(record.pure_loss || 0);
+                        const issuedNetWtD = parseFloat(record.issued_net_wt_diamond || 0);
+                        const recvD = parseFloat(record.received_qty_diamond || 0);
+                        const lD = parseFloat(record.loss_qty_diamond || 0);
+                        const receivedPieces = parseFloat(record.received_pieces_info || 0);
+                        const lP = parseFloat(record.loss_pieces_info || 0);
 
                         // ── Accumulate at DEPARTMENT level (all rows, including null-employee) ───
-                        dept.issued_net_wt_gold    += issuedNetWtG;
-                        dept.received_qty_gold     += recvG;
-                        dept.gross_loss_gold       += lG;
-                        dept.pure_weight_gold      += pureWtG;
-                        dept.pure_loss_gold        += pureLossG;
+                        dept.issued_net_wt_gold += issuedNetWtG;
+                        dept.received_qty_gold += recvG;
+                        dept.gross_loss_gold += lG;
+                        dept.pure_weight_gold += pureWtG;
+                        dept.pure_loss_gold += pureLossG;
                         dept.issued_net_wt_diamond += issuedNetWtD;
-                        dept.received_qty_diamond  += recvD;
-                        dept.loss_qty_diamond      += lD;
-                        dept.received_pieces       += receivedPieces;
-                        dept.loss_pieces           += lP;
+                        dept.received_qty_diamond += recvD;
+                        dept.loss_qty_diamond += lD;
+                        dept.received_pieces += receivedPieces;
+                        dept.loss_pieces += lP;
+
+                        // Set bag_count from SQL query result at department level
+                        dept.bag_count = parseFloat(record.bag_count || 0);
 
                         // ── Accumulate at EMPLOYEE level (skip null-employee rows) ───────────────
                         if (!employeeId) return;
 
-                        if (!dept.employees[employeeId]) {
+                        if (!dept.employees[employeeId])
+                        {
                             const fullName = [record.firstname, record.lastname].filter(Boolean).join(' ');
                             dept.employees[employeeId] = {
-                                employee_id:   employeeId,
+                                employee_id: employeeId,
                                 employee_name: fullName || 'Unknown Employee',
-                                unique_bags:   new Set(),
+                                // unique_bags: new Set(),
 
-                                issued_net_wt_gold:    0,
-                                received_qty_gold:     0,
-                                gross_loss_gold:       0,
-                                pure_weight_gold:      0,
-                                pure_loss_gold:        0,
-                                net_loss_gold:         0,
+                                issued_net_wt_gold: 0,
+                                received_qty_gold: 0,
+                                gross_loss_gold: 0,
+                                pure_weight_gold: 0,
+                                pure_loss_gold: 0,
+                                net_loss_gold: 0,
 
                                 issued_net_wt_diamond: 0,
-                                received_qty_diamond:  0,
-                                loss_qty_diamond:      0,
+                                received_qty_diamond: 0,
+                                loss_qty_diamond: 0,
 
                                 received_pieces: 0,
-                                loss_pieces:     0
+                                loss_pieces: 0
                             };
                         }
 
                         const emp = dept.employees[employeeId];
-                        if (bagId) emp.unique_bags.add(bagId);
+                        emp.bag_count = parseFloat(record.bag_count || 0); // captured directly from SQL COUNT(DISTINCT bagno)
+                        emp.net_loss_gold_sql = parseFloat(record.net_loss_gold || 0);
+                        // if (bagId) emp.unique_bags.add(bagId);
 
-                        emp.issued_net_wt_gold    += issuedNetWtG;
-                        emp.received_qty_gold     += recvG;
-                        emp.gross_loss_gold       += lG;
-                        emp.pure_weight_gold      += pureWtG;
-                        emp.pure_loss_gold        += pureLossG;
+                        emp.issued_net_wt_gold += issuedNetWtG;
+                        emp.received_qty_gold += recvG;
+                        emp.gross_loss_gold += lG;
+                        emp.pure_weight_gold += pureWtG;
+                        emp.pure_loss_gold += pureLossG;
                         emp.issued_net_wt_diamond += issuedNetWtD;
-                        emp.received_qty_diamond  += recvD;
-                        emp.loss_qty_diamond      += lD;
-                        emp.received_pieces       += receivedPieces;
-                        emp.loss_pieces           += lP;
+                        emp.received_qty_diamond += recvD;
+                        emp.loss_qty_diamond += lD;
+                        emp.received_pieces += receivedPieces;
+                        emp.loss_pieces += lP;
                     });
 
                     // ── Finalise: round, derive net_loss_gold, build employees_array ─────────────
@@ -1155,26 +1540,24 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                             // Convert employee map → sorted array with rounded values
                             dept.employees_array = Object.values(dept.employees).map(emp => ({
-                                employee_id:   emp.employee_id,
-                                name:          emp.employee_name,
-                                bag_count:     emp.unique_bags.size,
-                                unique_bags_array: Array.from(emp.unique_bags),
+                                employee_id: emp.employee_id,
+                                name: emp.employee_name,
+                                bag_count: emp.bag_count,
+                                // unique_bags_array: Array.from(emp.unique_bags),
 
-                                issued_net_wt_gold:    parseFloat(emp.issued_net_wt_gold.toFixed(4)),
-                                received_qty_gold:     parseFloat(emp.received_qty_gold.toFixed(4)),
-                                gross_loss_gold:       parseFloat(emp.gross_loss_gold.toFixed(4)),
-                                pure_weight_gold:      parseFloat(emp.pure_weight_gold.toFixed(4)),
-                                pure_loss_gold:        parseFloat(emp.pure_loss_gold.toFixed(4)),
-                                net_loss_gold:         emp.received_qty_gold > 0
-                                                        ? parseFloat((emp.gross_loss_gold / emp.received_qty_gold).toFixed(6))
-                                                        : 0,
+                                issued_net_wt_gold: parseFloat(emp.issued_net_wt_gold.toFixed(4)),
+                                received_qty_gold: parseFloat(emp.received_qty_gold.toFixed(4)),
+                                gross_loss_gold: parseFloat(emp.gross_loss_gold.toFixed(4)),
+                                pure_weight_gold: parseFloat(emp.pure_weight_gold.toFixed(4)),
+                                pure_loss_gold: parseFloat(emp.pure_loss_gold.toFixed(4)),
+                                net_loss_gold: parseFloat(emp.net_loss_gold_sql.toFixed(6)),
 
                                 issued_net_wt_diamond: parseFloat(emp.issued_net_wt_diamond.toFixed(4)),
-                                received_qty_diamond:  parseFloat(emp.received_qty_diamond.toFixed(4)),
-                                loss_qty_diamond:      parseFloat(emp.loss_qty_diamond.toFixed(4)),
+                                received_qty_diamond: parseFloat(emp.received_qty_diamond.toFixed(4)),
+                                loss_qty_diamond: parseFloat(emp.loss_qty_diamond.toFixed(4)),
 
-                                received_pieces:       parseFloat(emp.received_pieces.toFixed(4)),
-                                loss_pieces:           parseFloat(emp.loss_pieces.toFixed(4)),
+                                received_pieces: parseFloat(emp.received_pieces.toFixed(4)),
+                                loss_pieces: parseFloat(emp.loss_pieces.toFixed(4)),
 
                                 // Empty maps — summary report does not use per-bag/category breakdowns
                                 unique_categories_array: [],
@@ -1187,38 +1570,147 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             }));
 
                             // Finalise department fields
-                            dept.bag_count        = dept.unique_bags.size;
-                            dept.unique_bags_array = Array.from(dept.unique_bags);
+                            // dept.bag_count = dept.unique_bags.size;
+                            // For department: use max bag_count from employees OR keep SQL-derived value
+                            if (dept.employees_array.length > 0) {
+                                dept.bag_count = dept.employees_array.reduce((max, e) => {
+                                    const count = parseFloat(e.bag_count || 0);
+                                    return count > max ? count : max;
+                                }, 0);
+                            }
+                            // dept.unique_bags_array = Array.from(dept.unique_bags);
 
-                            dept.issued_net_wt_gold    = parseFloat(dept.issued_net_wt_gold.toFixed(4));
-                            dept.received_qty_gold     = parseFloat(dept.received_qty_gold.toFixed(4));
-                            dept.gross_loss_gold       = parseFloat(dept.gross_loss_gold.toFixed(4));
-                            dept.pure_weight_gold      = parseFloat(dept.pure_weight_gold.toFixed(4));
-                            dept.pure_loss_gold        = parseFloat(dept.pure_loss_gold.toFixed(4));
-                            dept.net_loss_gold         = dept.received_qty_gold > 0
-                                                            ? parseFloat((dept.gross_loss_gold / dept.received_qty_gold).toFixed(6))
-                                                            : 0;
+                            
+                            dept.issued_net_wt_gold = parseFloat(dept.issued_net_wt_gold.toFixed(4));
+                            dept.received_qty_gold = parseFloat(dept.received_qty_gold.toFixed(4));
+                            dept.gross_loss_gold = parseFloat(dept.gross_loss_gold.toFixed(4));
+                            dept.pure_weight_gold = parseFloat(dept.pure_weight_gold.toFixed(4));
+                            dept.pure_loss_gold = parseFloat(dept.pure_loss_gold.toFixed(4));
+                            dept.net_loss_gold = dept.received_qty_gold > 0
+                                ? parseFloat((dept.gross_loss_gold / dept.received_qty_gold).toFixed(6))
+                                : 0;
                             dept.issued_net_wt_diamond = parseFloat(dept.issued_net_wt_diamond.toFixed(4));
-                            dept.received_qty_diamond  = parseFloat(dept.received_qty_diamond.toFixed(4));
-                            dept.loss_qty_diamond      = parseFloat(dept.loss_qty_diamond.toFixed(4));
-                            dept.received_pieces       = parseFloat(dept.received_pieces.toFixed(4));
-                            dept.loss_pieces           = parseFloat(dept.loss_pieces.toFixed(4));
+                            dept.received_qty_diamond = parseFloat(dept.received_qty_diamond.toFixed(4));
+                            dept.loss_qty_diamond = parseFloat(dept.loss_qty_diamond.toFixed(4));
+                            dept.received_pieces = parseFloat(dept.received_pieces.toFixed(4));
+                            dept.loss_pieces = parseFloat(dept.loss_pieces.toFixed(4));
 
                             // Wax-tree placeholders (may be overwritten below)
                             dept.wax_tree_actual_production_gold = 0;
-                            dept.wax_tree_loss_gold              = 0;
-                            dept.wax_tree_received_qty_gold      = 0;
+                            dept.wax_tree_loss_gold = 0;
+                            dept.wax_tree_received_qty_gold = 0;
 
-                            delete dept.unique_bags;
+                            // delete dept.unique_bags;
                             delete dept.employees;
                         });
 
-                        groupedData[locationId].total_unique_bags = globalBagSet.size;
+                        // groupedData[locationId].total_unique_bags = globalBagSet.size;
                     });
 
+                    // ── Fetch Location-Level Bag Counts ──────────────────────────────────────────
+                    try
+                    {
+                        const locationBagCountQueryStartTime = Date.now();
+                        const locationBagCountQueryGovBefore = runtime.getCurrentScript().getRemainingUsage();
+                        
+                        // log.debug(logPrefix + ' - Location Bag Count Query Starting', {
+                        //     governance_before: locationBagCountQueryGovBefore,
+                        //     start_time: new Date(locationBagCountQueryStartTime).toISOString()
+                        // });
+                        
+                        const locationBagCountQuery = `
+                            SELECT
+                                BUILTIN_RESULT.TYPE_INTEGER(dept.custrecord_jj_mandept_location) AS location_id,
+                                BUILTIN_RESULT.TYPE_STRING(loc.name) AS location_name,
+                                COUNT(DISTINCT op.custrecord_jj_oprtns_bagno) AS bag_count
+                            FROM CUSTOMRECORD_JJ_OPERATIONS op
+                            LEFT JOIN CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN dir
+                                ON dir.custrecord_jj_operations = op.ID
+                            LEFT JOIN CUSTOMRECORD_JJ_BAG_GENERATION bag
+                                ON op.custrecord_jj_oprtns_bagno = bag.ID
+                            LEFT JOIN CUSTOMRECORD_JJ_MANUFACTURING_DEPT dept
+                                ON op.custrecord_jj_oprtns_department = dept.ID
+                            LEFT JOIN LOCATION loc
+                                ON dept.custrecord_jj_mandept_location = loc.ID
+                            LEFT JOIN employee emp
+                                ON op.custrecord_jj_oprtns_employee = emp.ID
+                            WHERE NVL(op.isinactive, 'F') = 'F'
+                                AND NVL(dept.isinactive, 'F') = 'F'
+                                AND NVL(emp.isinactive, 'F') = 'F'
+                                AND (
+                                    NVL(dir.custrecord_jj_issued_quantity, 0) > 0
+                                    OR NVL(dir.custrecord_jj_dir_starting_qty, 0) > 0
+                                )
+                                AND BUILTIN.CAST_AS(op.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') >= TO_DATE('${sqlStartDate}', 'YYYY-MM-DD HH24:MI:SS')
+                                AND BUILTIN.CAST_AS(op.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') < TO_DATE('${sqlEndDate}', 'YYYY-MM-DD HH24:MI:SS')
+                                ${repairOrderFilter !== null && repairOrderFilter !== undefined ? `AND NVL(op.custrecord_jj_repair_order, 'F') = '${repairOrderFilter}'` : ''}
+                                ${location ? `AND dept.custrecord_jj_mandept_location = '${location}'` : ''}
+                            GROUP BY dept.custrecord_jj_mandept_location, loc.name
+                        `;
+                        
+                        const locationBagCountResults = this.runQuery(locationBagCountQuery, logPrefix + '_LocationBagCountQuery');
+
+                        log.debug('locationBagCountResults', locationBagCountResults);
+                        
+                        // Log governance for location bag count query during execution
+                        const locationBagCountQueryEndTime = Date.now();
+                        const locationBagCountQueryGovAfter = runtime.getCurrentScript().getRemainingUsage();
+                        const locationBagCountQueryGovUsed = locationBagCountQueryGovBefore - locationBagCountQueryGovAfter;
+                        
+                        // log.debug(logPrefix + ' - Location Bag Count Query Complete', {
+                        //     results_count: (locationBagCountResults ? locationBagCountResults.length : 0),
+                        //     execution_time_ms: locationBagCountQueryEndTime - locationBagCountQueryStartTime,
+                        //     governance_used: locationBagCountQueryGovUsed,
+                        //     governance_remaining: locationBagCountQueryGovAfter
+                        // });
+
+                        // Build location bag count map
+                        const locationBagCountMap = {};
+                        if (locationBagCountResults && locationBagCountResults.length > 0)
+                        {
+                            locationBagCountResults.forEach(record => {
+                                const locId = record.location_id;
+                                const bagCount = parseFloat(record.bag_count || 0);
+                                locationBagCountMap[locId] = bagCount;
+                            });
+                        }
+
+                        // Apply location bag counts to all departments
+                        Object.keys(groupedData).forEach(locationId => {
+                            if (locationBagCountMap[locationId] !== undefined)
+                            {
+                                groupedData[locationId].location_bag_count = locationBagCountMap[locationId];
+                            } else
+                            {
+                                groupedData[locationId].location_bag_count = 0;
+                            }
+
+                            // Also apply bag_count to each department if not already set
+                            Object.keys(groupedData[locationId].departments).forEach(departmentId => {
+                                if (groupedData[locationId].departments[departmentId].bag_count === undefined)
+                                {
+                                    groupedData[locationId].departments[departmentId].bag_count = 0;
+                                }
+                            });
+                        });
+                    } catch (locBagErr)
+                    {
+                        log.error(logPrefix + ' - Location Bag Count Query Error', locBagErr);
+                    }
+
                     // ── Wax Tree (Overall & Production only) ─────────────────────────────────────
-                    if (includeWaxTree) {
-                        try {
+                    if (includeWaxTree)
+                    {
+                        try
+                        {
+                            const waxTreeQueryStartTime = Date.now();
+                            const waxTreeQueryGovBefore = runtime.getCurrentScript().getRemainingUsage();
+                            
+                            // log.debug(logPrefix + ' - Wax Tree Query Starting', {
+                            //     governance_before: waxTreeQueryGovBefore,
+                            //     start_time: new Date(waxTreeQueryStartTime).toISOString()
+                            // });
+                            
                             const waxTreeQuery = `
                                 SELECT
                                     SUM(CASE WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
@@ -1263,23 +1755,36 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             `;
 
                             const waxResults = query.runSuiteQL({ query: waxTreeQuery }).asMappedResults();
-                            if (waxResults && waxResults.length > 0) {
+                            
+                            // Log governance for wax tree query during execution
+                            const waxTreeQueryEndTime = Date.now();
+                            const waxTreeQueryGovAfter = runtime.getCurrentScript().getRemainingUsage();
+                            const waxTreeQueryGovUsed = waxTreeQueryGovBefore - waxTreeQueryGovAfter;
+                            
+                            // log.debug(logPrefix + ' - Wax Tree Query Complete', {
+                            //     results_count: (waxResults ? waxResults.length : 0),
+                            //     execution_time_ms: waxTreeQueryEndTime - waxTreeQueryStartTime,
+                            //     governance_used: waxTreeQueryGovUsed,
+                            //     governance_remaining: waxTreeQueryGovAfter
+                            // });
+                            if (waxResults && waxResults.length > 0)
+                            {
                                 const row = waxResults[0];
                                 const waxDeptMap = {
                                     [CASTING]: {
-                                        production: parseFloat(row.casting_qty          || 0),
-                                        loss:       parseFloat(row.casting_loss          || 0),
-                                        received:   parseFloat(row.casting_received_qty  || 0)
+                                        production: parseFloat(row.casting_qty || 0),
+                                        loss: parseFloat(row.casting_loss || 0),
+                                        received: parseFloat(row.casting_received_qty || 0)
                                     },
                                     [TREE_CUTTING_CLEANING]: {
-                                        production: parseFloat(row.tree_cutting_qty          || 0),
-                                        loss:       parseFloat(row.tree_cutting_loss          || 0),
-                                        received:   parseFloat(row.tree_cutting_received_qty  || 0)
+                                        production: parseFloat(row.tree_cutting_qty || 0),
+                                        loss: parseFloat(row.tree_cutting_loss || 0),
+                                        received: parseFloat(row.tree_cutting_received_qty || 0)
                                     },
                                     [GRINDING]: {
-                                        production: parseFloat(row.grinding_qty          || 0),
-                                        loss:       parseFloat(row.grinding_loss          || 0),
-                                        received:   parseFloat(row.grinding_received_qty  || 0)
+                                        production: parseFloat(row.grinding_qty || 0),
+                                        loss: parseFloat(row.grinding_loss || 0),
+                                        received: parseFloat(row.grinding_received_qty || 0)
                                     }
                                 };
 
@@ -1289,82 +1794,37 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                         if (!deptObj) return;
 
                                         deptObj.wax_tree_actual_production_gold = waxDeptMap[deptId].production;
-                                        deptObj.wax_tree_loss_gold              = waxDeptMap[deptId].loss;
-                                        deptObj.wax_tree_received_qty_gold      = waxDeptMap[deptId].received;
+                                        deptObj.wax_tree_loss_gold = waxDeptMap[deptId].loss;
+                                        deptObj.wax_tree_received_qty_gold = waxDeptMap[deptId].received;
 
                                         // Override the DIR-derived gold values with Wax Tree actuals
                                         // for Casting / Tree Cutting & Cleaning / Grinding
-                                        deptObj.received_qty_gold = waxDeptMap[deptId].production;
-                                        deptObj.gross_loss_gold   = waxDeptMap[deptId].loss;
-                                        deptObj.net_loss_gold     = deptObj.received_qty_gold > 0
+                                        deptObj.received_qty_gold = waxDeptMap[deptId].received;
+                                        deptObj.gross_loss_gold = waxDeptMap[deptId].loss;
+                                        deptObj.net_loss_gold = deptObj.received_qty_gold > 0
                                             ? parseFloat((deptObj.gross_loss_gold / deptObj.received_qty_gold).toFixed(6))
                                             : 0;
                                     });
                                 });
                             }
-                        } catch (waxErr) {
+                        } catch (waxErr)
+                        {
                             log.error(logPrefix + ' - Wax Tree Error', waxErr);
                         }
                     }
-
-                    log.debug(logPrefix + ' - Complete', Object.keys(groupedData).length + ' location(s)');
-                    
-                    // ── Format and log summary data for debugging ────────────────────────────────
-                    try {
-                        const summaryLog = [];
-                        Object.keys(groupedData).forEach(locId => {
-                            const location = groupedData[locId];
-                            summaryLog.push(`\n📍 LOCATION: ${location.location_name} (Total Unique Bags: ${location.total_unique_bags})`);
-                            
-                            Object.keys(location.departments).forEach(deptId => {
-                                const dept = location.departments[deptId];
-                                summaryLog.push(`\n  🏭 DEPARTMENT: ${dept.department_name}`);
-                                summaryLog.push(`     ├─ Bags: ${dept.bag_count}`);
-                                summaryLog.push(`     ├─ Gold Metrics:`);
-                                summaryLog.push(`     │  ├─ Issued Net Wt (Gold): ${parseFloat(dept.issued_net_wt_gold.toFixed(4))}`);
-                                summaryLog.push(`     │  ├─ Received Qty (Gold): ${parseFloat(dept.received_qty_gold.toFixed(4))}`);
-                                summaryLog.push(`     │  ├─ Gross Loss (Gold): ${parseFloat(dept.gross_loss_gold.toFixed(4))}`);
-                                summaryLog.push(`     │  ├─ Pure Weight (Gold): ${parseFloat(dept.pure_weight_gold.toFixed(4))}`);
-                                summaryLog.push(`     │  ├─ Pure Loss (Gold): ${parseFloat(dept.pure_loss_gold.toFixed(4))}`);
-                                summaryLog.push(`     │  └─ Net Loss (Gold): ${parseFloat(dept.net_loss_gold.toFixed(6))}`);
-                                summaryLog.push(`     └─ Diamond Metrics:`);
-                                summaryLog.push(`        ├─ Issued Net Wt (Diamond): ${parseFloat(dept.issued_net_wt_diamond.toFixed(4))}`);
-                                summaryLog.push(`        ├─ Received Qty (Diamond): ${parseFloat(dept.received_qty_diamond.toFixed(4))}`);
-                                summaryLog.push(`        ├─ Loss Qty (Diamond): ${parseFloat(dept.loss_qty_diamond.toFixed(4))}`);
-                                summaryLog.push(`        ├─ Received Pieces: ${parseFloat(dept.received_pieces.toFixed(4))}`);
-                                summaryLog.push(`        └─ Loss Pieces: ${parseFloat(dept.loss_pieces.toFixed(4))}`);
-                                
-                                // Log employees if they exist
-                                if (dept.employees_array && dept.employees_array.length > 0) {
-                                    summaryLog.push(`\n     👥 EMPLOYEES (${dept.employees_array.length}):`);
-                                    dept.employees_array.forEach((emp, idx) => {
-                                        const isLast = idx === dept.employees_array.length - 1;
-                                        summaryLog.push(`     ${isLast ? '└' : '├'}─ ${emp.name} (Bags: ${emp.bag_count})`);
-                                        summaryLog.push(`        ${isLast ? ' ' : '│'}  ├─ Issued Net Wt: ${parseFloat(emp.issued_net_wt_gold.toFixed(4))}`);
-                                        summaryLog.push(`        ${isLast ? ' ' : '│'}  ├─ Received Qty: ${parseFloat(emp.received_qty_gold.toFixed(4))}`);
-                                        summaryLog.push(`        ${isLast ? ' ' : '│'}  └─ Loss Qty: ${parseFloat(emp.gross_loss_gold.toFixed(4))}`);
-                                    });
-                                }
-                            });
-                        });
-                        log.debug(logPrefix + ' - Summary Data' , summaryLog.join('\n'));
-                    } catch (logErr) {
-                        log.error(logPrefix + ' - Logging Error', logErr);
-                    }
-                    
                     return groupedData;
-
-                } catch (error) {
+                } catch (error)
+                {
                     log.error(logPrefix + ' - Error', error);
                     return {};
                 }
             },
-            
-             
+
+
             // ─────────────────────────────────────────────────────────────────────────────
             // PUBLIC WRAPPERS — one per report type
             // ─────────────────────────────────────────────────────────────────────────────
-             
+
             /**
              * Summary totals for ALL operations (production + repair, no filter).
              * Mirrors getSummaryProductionEfficiencyData but without the repair-order
@@ -1378,11 +1838,11 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
             getSummaryOverallEfficiencyData(location, startDate, endDate) {
                 return this.buildSummaryEfficiencyData(location, startDate, endDate, {
                     repairOrderFilter: null,   // Overall: no repair-order filter (all operations)
-                    includeWaxTree:    true,   // Overall: includes Wax Tree data
-                    logPrefix:         'getSummaryOverallEfficiencyData'
+                    includeWaxTree: true,   // Overall: includes Wax Tree data
+                    logPrefix: 'getSummaryOverallEfficiencyData'
                 });
             },
-             
+
             /**
              * Summary totals for PRODUCTION (non-repair) operations only.
              * Includes Wax Tree data for Casting / Tree Cutting / Grinding.
@@ -1395,11 +1855,11 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
             getSummaryProductionEfficiencyData(location, startDate, endDate) {
                 return this.buildSummaryEfficiencyData(location, startDate, endDate, {
                     repairOrderFilter: 'F',    // Production: non-repair operations only
-                    includeWaxTree:    true,   // Production: includes Wax Tree data
-                    logPrefix:         'getSummaryProductionEfficiencyData'
+                    includeWaxTree: true,   // Production: includes Wax Tree data
+                    logPrefix: 'getSummaryProductionEfficiencyData'
                 });
             },
-             
+
             /**
              * Summary totals for REPAIR operations only.
              * Wax Tree data is NOT applicable to repair orders and is excluded.
@@ -1412,8 +1872,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
             getSummaryRepairEfficiencyData(location, startDate, endDate) {
                 return this.buildSummaryEfficiencyData(location, startDate, endDate, {
                     repairOrderFilter: 'T',    // Repair: repair operations only
-                    includeWaxTree:    false,  // Repair: Wax Tree not applicable
-                    logPrefix:         'getSummaryRepairEfficiencyData'
+                    includeWaxTree: false,  // Repair: Wax Tree not applicable
+                    logPrefix: 'getSummaryRepairEfficiencyData'
                 });
             },
 
@@ -1428,8 +1888,10 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              * @return {Object} { status: 'SUCCESS'|'ERROR', reason: string, data: { recoveryMap: { [deptName]: avgRecoveryPercentage } } }
              */
             getAvgRecoveryPercentageBatch(startDate, endDate, departmentNames) {
-                try {
-                    if (!startDate || !endDate || !departmentNames.length) {
+                try
+                {
+                    if (!startDate || !endDate || !departmentNames.length)
+                    {
                         return {
                             status: 'SUCCESS',
                             reason: 'Missing params',
@@ -1516,24 +1978,29 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         // Handle "26-Apr-2026 1:56 pm" → just parse date part, ignore time
                         let datePart = s.split(' ')[0]; // "26-Apr-2026"
 
-                        if (datePart.indexOf('-') !== -1) {
+                        if (datePart.indexOf('-') !== -1)
+                        {
                             let parts = datePart.split('-');
-                            if (parts.length === 3) {
+                            if (parts.length === 3)
+                            {
                                 // Could be DD-Mon-YYYY (26-Apr-2026) or YYYY-MM-DD
-                                if (isNaN(parseInt(parts[1]))) {
+                                if (isNaN(parseInt(parts[1])))
+                                {
                                     // DD-Mon-YYYY
                                     const months = {
                                         Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
                                         Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
                                     };
                                     return new Date(parseInt(parts[2]), months[parts[1]], parseInt(parts[0]));
-                                } else if (parts[0].length === 4) {
+                                } else if (parts[0].length === 4)
+                                {
                                     // YYYY-MM-DD
                                     return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                                 }
                             }
                         }
-                        if (s.indexOf('/') !== -1) {
+                        if (s.indexOf('/') !== -1)
+                        {
                             // MM/DD/YYYY
                             let parts2 = s.split('/');
                             return new Date(parseInt(parts2[2]), parseInt(parts2[0]) - 1, parseInt(parts2[1]));
@@ -1560,9 +2027,11 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     let periods = allDates.map(function (dateStr, idx) {
                         let periodEnd = parseYMD(dateStr);
                         let periodStart;
-                        if (idx === 0) {
+                        if (idx === 0)
+                        {
                             periodStart = new Date('1900-01-01');
-                        } else {
+                        } else
+                        {
                             periodStart = new Date(parseYMD(allDates[idx - 1]));
                             periodStart.setDate(periodStart.getDate() + 1);
                         }
@@ -1587,13 +2056,15 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     let recoveryDatesForRange = new Set();
 
                     let currentDate = new Date(parseYMD(startDate));
-                    while (currentDate.getTime() <= endTs) {
+                    while (currentDate.getTime() <= endTs)
+                    {
                         let currentYMD = toYMD(currentDate);
                         let currentTs = currentDate.getTime();
 
                         // Find first recovery date >= currentDate
                         let foundRecoveryDate = null;
-                        for (let i = 0; i < allDates.length; i++) {
+                        for (let i = 0; i < allDates.length; i++)
+                        {
                             let dateTs = parseYMD(allDates[i]).getTime();
                             if (dateTs >= currentTs)
                             {
@@ -1602,13 +2073,15 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             }
                         }
 
-                        if (foundRecoveryDate) {
+                        if (foundRecoveryDate)
+                        {
                             recoveryDatesForRange.add(foundRecoveryDate);
                             // Jump to day after this recovery date to avoid redundant checks
                             let nextDate = new Date(parseYMD(foundRecoveryDate));
                             nextDate.setDate(nextDate.getDate() + 1);
                             currentDate = nextDate;
-                        } else {
+                        } else
+                        {
                             // No recovery date found, move to next day
                             currentDate.setDate(currentDate.getDate() + 1);
                         }
@@ -1632,7 +2105,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                     filteredRows.forEach(function (r) {
                         let key = r.deptName + '|' + r.date;
-                        if (!deptDateSeen[key]) {
+                        if (!deptDateSeen[key])
+                        {
                             deptDateSeen[key] = true;
                             if (!deptPctAccum[r.deptName]) deptPctAccum[r.deptName] = [];
                             deptPctAccum[r.deptName].push(r.deptPct);
@@ -1685,7 +2159,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         }
                     };
 
-                } catch (error) {
+                } catch (error)
+                {
                     log.error('getAvgRecoveryPercentageBatch error', error);
                     return {
                         status: 'ERROR',

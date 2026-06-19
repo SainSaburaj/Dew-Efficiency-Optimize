@@ -93,9 +93,15 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
         // const LABOUR_OVERHEADS_CHARGE_ITEM_ID = 25718; // Labour Overheads Charge item record id (SB Old)
         // const NET_LOSS_CHARGE_ITEM_ID = 25719; // Net Loss Charge item record id (SB Old)
         // const FINDING_ITEM_SERVICE_ID = 26125; // Finding item service charge id (SB Old)
-        const LABOUR_OVERHEADS_CHARGE_ITEM_ID = 41074; // Labour Overheads Charge item record id (SB and PD)
-        const NET_LOSS_CHARGE_ITEM_ID = 41075; // Net Loss Charge item record id (SB and PD)
-        const FINDING_ITEM_SERVICE_ID = 41211; // Finding item service charge id (SB and PD)
+        // const LABOUR_OVERHEADS_CHARGE_ITEM_ID = 41074; // Labour Overheads Charge item record id (SB and PD)
+        // const NET_LOSS_CHARGE_ITEM_ID = 41075; // Net Loss Charge item record id (SB and PD)
+        // const FINDING_ITEM_SERVICE_ID = 41211; // Finding item service charge id (SB and PD)
+
+        const CHARGE_TYPES = {
+            LABOUR_OVERHEADS_CHARGE: 1,
+            FINDING_ITEM_SERVICE: 2,
+            NET_LOSS_CHARGE: 3
+        };
 
         /**
          * @description searchResults
@@ -169,7 +175,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              */
             getBagsReadyToMove(bags, department, bagSearchKey, pageIndex, params, manufacturer, pageSize, operationId, locations) {
                 try {
-                    log.debug('getBagsReadyToMove', { bags: bags, department: department, bagSearchKey: bagSearchKey, pageIndex: pageIndex, params: params, manufacturer: manufacturer, operationId: operationId, locations: locations });
+                    // log.debug('getBagsReadyToMove', { bags: bags, department: department, bagSearchKey: bagSearchKey, pageIndex: pageIndex, params: params, manufacturer: manufacturer, operationId: operationId, locations: locations });
                     let filters = [
                         ["isinactive", "is", "F"],
                         "AND", ["custrecord_jj_oprtns_department.isinactive", "is", "F"],
@@ -190,7 +196,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                     if (locations) {
                         const locationArr = Array.isArray(locations) ? locations : [locations];
-
                         if (locationArr.length > 0) {
                             filters.push("AND", ["custrecord_jj_oprtns_bagcore.custrecord_jj_bagcore_location", "anyof", locationArr],
                                 "AND", ["custrecord_jj_oprtns_department.custrecord_jj_mandept_location", "anyof", locationArr]
@@ -436,7 +441,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
             getAllManufacturingDepartments(departmentIds, params, allDepartments, userId, locations) {
                 try {
-                    log.debug("getAllManufacturingDepartments", { departmentIds, params, allDepartments, userId, locations });
+                    // log.debug("getAllManufacturingDepartments", { departmentIds, params, allDepartments, userId, locations });
                     let filters = [["isinactive", "is", "F"], "AND", ["custrecord_jj_mandept_hod.isinactive", "is", "F"]];
                     let columns = [
                         search.createColumn({ name: "internalid", sort: search.Sort.ASC, label: "internal_id" }),
@@ -445,7 +450,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                     if (locations) {
                         const locationArr = Array.isArray(locations) ? locations : [locations];
-
                         if (locationArr.length > 0) {
                             filters.push("AND", ["custrecord_jj_mandept_location", "anyof", locationArr]);
                         }
@@ -753,9 +757,16 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         "AND", ["custrecord_jj_bagcoremat_item.class", "anyof", GOLD_CLASS_IDS]
                     ];
 
+                    // if (locations) {
+                    //     filters.push("AND", ["custrecord_jj_bagcoremat_bagcore.custrecord_jj_bagcore_location", "anyof", locations]);
+                    // }
                     if (locations) {
-                        filters.push("AND", ["custrecord_jj_bagcoremat_bagcore.custrecord_jj_bagcore_location", "anyof", locations]);
+                        const locationArr = Array.isArray(locations) ? locations : [locations];
+                        if (locationArr.length > 0) {
+                            filters.push("AND", ["custrecord_jj_bagcoremat_bagcore.custrecord_jj_bagcore_location", "anyof", locationArr]);
+                        }
                     }
+
                     if (deptId && deptId != undefined && deptId != "undefined" && allDept != "true") {
                         filters.push("AND", ["custrecord_jj_bagcoremat_bag_name.custrecord_jj_baggen_present_dept", "anyof", deptId]);
                     }
@@ -839,8 +850,14 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         search.createColumn({ name: "custrecord_jj_oprtns_bagno", sort: search.Sort.DESC, label: "bag_no_id" })
                     ];
 
+                    // if (locations) {
+                    //     filters.push("AND", ["custrecord_jj_oprtns_bagcore.custrecord_jj_bagcore_location", "anyof", locations]);
+                    // }
                     if (locations) {
-                        filters.push("AND", ["custrecord_jj_oprtns_bagcore.custrecord_jj_bagcore_location", "anyof", locations]);
+                        const locationArr = Array.isArray(locations) ? locations : [locations];
+                        if (locationArr.length > 0) {
+                            filters.push("AND", ["custrecord_jj_oprtns_bagcore.custrecord_jj_bagcore_location", "anyof", locationArr]);
+                        }
                     }
 
                     if (params != 'bag_print_all') {
@@ -1028,8 +1045,14 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         search.createColumn({ name: "custrecord_jj_ring_size", join: "CUSTRECORD_JJ_BAGGEN_BAGCORE", label: "ring_size" })
                     ];
 
+                    // if (locations) {
+                    //     filters.push("AND", ["custrecord_jj_baggen_bagcore.custrecord_jj_bagcore_location", "anyof", locations]);
+                    // }
                     if (locations) {
-                        filters.push("AND", ["custrecord_jj_baggen_bagcore.custrecord_jj_bagcore_location", "anyof", locations]);
+                        const locationArr = Array.isArray(locations) ? locations : [locations];
+                        if (locationArr.length > 0) {
+                            filters.push("AND", ["custrecord_jj_baggen_bagcore.custrecord_jj_bagcore_location", "anyof", locationArr]);
+                        }
                     }
 
                     // if (deptId && deptId.length > 0 && deptId != undefined && deptId != "undefined" && allDept != "true") {
@@ -1180,8 +1203,14 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     ];
 
                     // Add location filter if provided
+                    // if (locations) {
+                    //     filters.push("AND", ["location", "anyof", locations]);
+                    // }
                     if (locations) {
-                        filters.push("AND", ["location", "anyof", locations]);
+                        const locationArr = Array.isArray(locations) ? locations : [locations];
+                        if (locationArr.length > 0) {
+                            filters.push("AND", ["location", "anyof", locationArr]);
+                        }
                     }
 
                     // Conditionally add an internal ID filter if workOrderId is provided
@@ -1189,8 +1218,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         // log.debug("123")
                         filters.push("AND", ["internalidnumber", "equalto", workOrderId]);
                     }
-
-                    log.debug("getWorkOrderDetails Filters", filters);
 
                     // Create the work order search object with the conditional filters
                     let workorderSearchObj = search.create({
@@ -1821,33 +1848,31 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         PAGE_SIZE: 1000
                     });
 
+                    const GOLD_CLASS_SET = new Set(GOLD_CLASS_IDS.map(Number));
+                    const DIAMOND_CLASS_SET = new Set(DIAMOND_CLASSES_IDS.map(Number));
+                    const STONE_CLASS_SET = new Set(STONE_CLASSES_IDS.map(Number));
+
                     // log.debug('getTotalMaterialWeightsForBags - searchResults:', searchResults);
 
                     if (searchResults && Array.isArray(searchResults)) {
                         searchResults.forEach((result) => {
                             const receiveWeight = Number(result.total_receive?.value || 0);
                             const itemClassId = Number(result.item_class?.value);
-                            const itemClassIdStr = String(result.item_class?.value);
+                            // const itemClassIdStr = String(result.item_class?.value);
 
-                            if (GOLD_CLASS_IDS.includes(itemClassId)) {
+                            if (GOLD_CLASS_SET.has(itemClassId)) {
                                 goldWeight += receiveWeight;
                             }
-                            if (DIAMOND_CLASSES_IDS.includes(itemClassIdStr)) {
+                            if (DIAMOND_CLASS_SET.has(itemClassId)) {
                                 // Diamond weight is in carats, convert to grams (1 carat = 0.2 grams)
                                 diamondWeight += receiveWeight;
                             }
-                            if (STONE_CLASSES_IDS.includes(itemClassIdStr)) {
+                            if (STONE_CLASS_SET.has(itemClassId)) {
                                 // Color stone weight is in carats, convert to grams (1 carat = 0.2 grams)
                                 colorStoneWeight += receiveWeight;
                             }
                         });
                     }
-
-                    log.debug('getTotalMaterialWeightsForBags', {
-                        goldWeight,
-                        diamondWeight,
-                        colorStoneWeight
-                    });
 
                     return {
                         goldWeight,
@@ -1857,11 +1882,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                 } catch (error) {
                     log.error('Error in getTotalMaterialWeightsForBags', error);
-                    return {
-                        goldWeight: 0,
-                        diamondWeight: 0,
-                        colorStoneWeight: 0
-                    };
+                    return { goldWeight: 0, diamondWeight: 0, colorStoneWeight: 0 };
                 }
             },
 
@@ -2249,7 +2270,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                 }
             },
 
-            getMetals(departmentId) {
+            getMetals(departmentId, isCastingDept) {
                 try {
                     let metalList = [];
                     let searchType = "";
@@ -2264,7 +2285,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         searchType = "assemblyitem";
                         // filters.push("AND", ["internalid", "anyof", GOLD_SCRAP_ITEM_ID]);
                         // searchType = "item";
-                    } else if (departmentId && departmentId == CASTING_DEPT_ID) {
+                        // } else if (departmentId && departmentId == CASTING_DEPT_ID) {
+                    } else if (departmentId && isCastingDept) {
                         // filters.push("AND", ["type", "anyof", "Assembly"], "AND", ["parent", "anyof", METAL_ARRAY_GOLD]);
                         // searchType = "assemblyitem";
                         filters.push("AND", ["internalid", "anyof", GOLD_SCRAP_ITEM_ID]); // TODO: Need Update
@@ -2634,8 +2656,14 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     // Base filters and columns
                     let filters = [["isinactive", "is", "F"]];
 
+                    // if (locations) {
+                    //     filters.push("AND", ["custrecord_jj_load_list.custrecord_jj_bag_tree_location", "anyof", locations]);
+                    // }
                     if (locations) {
-                        filters.push("AND", ["custrecord_jj_load_list.custrecord_jj_bag_tree_location", "anyof", locations]);
+                        const locationArr = Array.isArray(locations) ? locations : [locations];
+                        if (locationArr.length > 0) {
+                            filters.push("AND", ["custrecord_jj_load_list.custrecord_jj_bag_tree_location", "anyof", locationArr]);
+                        }
                     }
                     let columns = [
                         { name: "internalid", sort: search.Sort.DESC, label: "wax_tree_id" },
@@ -4064,7 +4092,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
             listBagsForAssemblyBuild(isAssemblyBuild, locationId) {
                 try {
-                    log.debug("listBagsForAssemblyBuild { isAssemblyBuild, locationId }", { isAssemblyBuild, locationId })
                     let searchFilters = [
                         // ["custrecord_jj_oprtns_department", "anyof", BARCODING_AND_FG_DEPT_ID],
                         ["custrecord_jj_oprtns_department.custrecord_jj_mandept_is_build_dept", "is", "T"],
@@ -4925,7 +4952,9 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             'custrecord_jj_mandept_laser_pend_status',
                             'custrecord_jj_mandept_hm_pend_status',
                             'custrecord_jj_mandept_unbilled_status',
-                            'custrecord_jj_mandept_loss_outsourced'
+                            'custrecord_jj_mandept_loss_outsourced',
+                            'custrecord_jj_mandept_has_bulk_movement',
+                            'custrecord_jj_mandept_has_bulk_acknowled'
                         ]
                     });
 
@@ -4959,6 +4988,9 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         labelPendStatus: departmentFields.custrecord_jj_mandept_label_pend_status?.[0]?.value || null,
                         laserPendStatus: departmentFields.custrecord_jj_mandept_laser_pend_status?.[0]?.value || null,
                         hallmarkingPendStatus: departmentFields.custrecord_jj_mandept_hm_pend_status?.[0]?.value || null,
+
+                        hasBulkMovement: departmentFields.custrecord_jj_mandept_has_bulk_movement || false,
+                        hasBulkAcknowled: departmentFields.custrecord_jj_mandept_has_bulk_acknowled || false,
                     };
 
                     return result;
@@ -7688,7 +7720,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              *   
              * @returns {Array<Object>} An object containing the status, reason, and data (Wax Tree casting loss details).
              */
-            getTodaysWaxTreeLoss() {
+            getTodaysWaxTreeLoss(locations) {
                 try {
                     // // Create the search object for the custom record type 'customrecord_jj_wax_tree'  
                     // let waxTreeSearchObj = search.create({
@@ -7739,57 +7771,55 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     //     return true; // Continue to the next result  
                     // });
 
-                    let sqlQuery = `SELECT 
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_WAX_TREE.ID) AS ID, 
-                            BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_WAX_TREE.altname) AS altname, 
-                            BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_WAX_TREE.name) AS name, 
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_metal_list) AS custrecord_jj_metal_list, 
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_used_lot) AS custrecord_jj_used_lot, 
-                            BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_casting_loss) AS custrecord_jj_casting_loss, 
-                            BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_recovered) AS custrecord_jj_scrap_recovered, 
-                            BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_write_off) AS custrecord_jj_scrap_write_off, 
-                            BUILTIN_RESULT.TYPE_FLOAT(NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_casting_loss, 0) - (NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_recovered, 0) + NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_write_off, 0))) AS loss_remaining, 
-                            BUILTIN_RESULT.TYPE_STRING(item_SUB.itemid) AS itemid, 
+                    let sqlQuery = `SELECT
+                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_WAX_TREE.ID) AS ID,
+                            BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_WAX_TREE.altname) AS altname,
+                            BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_WAX_TREE.name) AS name,
+                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_metal_list) AS custrecord_jj_metal_list,
+                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_used_lot) AS custrecord_jj_used_lot,
+                            BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_casting_loss) AS custrecord_jj_casting_loss,
+                            BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_recovered) AS custrecord_jj_scrap_recovered,
+                            BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_write_off) AS custrecord_jj_scrap_write_off,
+                            BUILTIN_RESULT.TYPE_FLOAT(
+                                NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_casting_loss, 0) -
+                                (NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_recovered, 0) + NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_write_off, 0))
+                            ) AS loss_remaining,
+                            BUILTIN_RESULT.TYPE_STRING(item_SUB.itemid) AS itemid,
                             BUILTIN_RESULT.TYPE_STRING(item_SUB.name_0) AS purity,
                             BUILTIN_RESULT.TYPE_INTEGER(item_SUB.metal_quality_id) AS metal_quality_id
                         FROM 
-                            CUSTOMRECORD_JJ_WAX_TREE, 
-                            (
-                            SELECT 
-                                item.ID AS id_0, 
-                                item.ID AS id_join, 
-                                item.itemid AS itemid, 
-                                CUSTOMRECORD_JJ_DD_METAL_QUALITY_SUB.name AS name_0,
-                                item.custitem_jj_metal_quality AS metal_quality_id
-                            FROM 
-                                item, 
-                                (
-                                    SELECT 
-                                        CUSTOMRECORD_JJ_DD_METAL_QUALITY.ID AS ID, 
-                                        CUSTOMRECORD_JJ_DD_METAL_QUALITY.ID AS id_join, 
+                            CUSTOMRECORD_JJ_WAX_TREE
+                            LEFT JOIN CUSTOMRECORD_JJ_BAG_TREE_LOAD ON CUSTOMRECORD_JJ_WAX_TREE.CUSTRECORD_JJ_LOAD_LIST = CUSTOMRECORD_JJ_BAG_TREE_LOAD.ID
+                            LEFT JOIN (
+                                SELECT
+                                    item.ID AS id_0,
+                                    item.ID AS id_join,
+                                    item.itemid AS itemid,
+                                    CUSTOMRECORD_JJ_DD_METAL_QUALITY_SUB.name AS name_0,
+                                    item.custitem_jj_metal_quality AS metal_quality_id
+                                FROM 
+                                    item
+                                    LEFT JOIN (
+                                        SELECT
+                                        CUSTOMRECORD_JJ_DD_METAL_QUALITY.ID AS ID,
+                                        CUSTOMRECORD_JJ_DD_METAL_QUALITY.ID AS id_join,
                                         CUSTOMLIST_JJ_METAL_PURITY_LIST.name AS name
-                                    FROM 
-                                        CUSTOMRECORD_JJ_DD_METAL_QUALITY, 
-                                        CUSTOMLIST_JJ_METAL_PURITY_LIST
-                                    WHERE 
-                                        CUSTOMRECORD_JJ_DD_METAL_QUALITY.custrecord_jj_dd_metal_quality_purity = CUSTOMLIST_JJ_METAL_PURITY_LIST.ID(+)
-                                ) CUSTOMRECORD_JJ_DD_METAL_QUALITY_SUB
-                            WHERE 
-                                item.custitem_jj_metal_quality = CUSTOMRECORD_JJ_DD_METAL_QUALITY_SUB.ID(+)
+                                        FROM 
+                                            CUSTOMRECORD_JJ_DD_METAL_QUALITY
+                                            LEFT JOIN CUSTOMLIST_JJ_METAL_PURITY_LIST ON CUSTOMRECORD_JJ_DD_METAL_QUALITY.custrecord_jj_dd_metal_quality_purity = CUSTOMLIST_JJ_METAL_PURITY_LIST.ID
+                                    ) CUSTOMRECORD_JJ_DD_METAL_QUALITY_SUB
+                                        ON item.custitem_jj_metal_quality = CUSTOMRECORD_JJ_DD_METAL_QUALITY_SUB.ID
                             ) item_SUB
-                            WHERE 
-                            CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_metal_list = item_SUB.id_0(+)
-                            AND (
-                                (
-                                    NVL(CUSTOMRECORD_JJ_WAX_TREE.isinactive, 'F') = 'F' 
-                                    AND CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_casting_loss IS NOT NULL 
-                                    AND CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_to_cutting_date BETWEEN BUILTIN.RELATIVE_RANGES('TODAY', 'START', 'DATETIME_AS_DATE') 
-                                    AND BUILTIN.RELATIVE_RANGES('TODAY', 'END', 'DATETIME_AS_DATE') 
-                                    AND CASE WHEN 
-                                        ROUND(NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_recovered, 0) + NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_write_off, 0), 6) 
-                                        < ROUND(NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_casting_loss, 0), 6) THEN 1 ELSE 0 END IN ('1')
-                                )
-                            )
+                            ON CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_metal_list = item_SUB.id_0
+                        WHERE
+                            CUSTOMRECORD_JJ_BAG_TREE_LOAD.custrecord_jj_bag_tree_location IN (${locations})
+                            AND NVL(CUSTOMRECORD_JJ_WAX_TREE.isinactive, 'F') = 'F'
+                            AND CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_casting_loss IS NOT NULL
+                            -- AND CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_to_cutting_date BETWEEN BUILTIN.RELATIVE_RANGES('TODAY', 'START', 'DATETIME_AS_DATE')
+                            -- AND BUILTIN.RELATIVE_RANGES('TODAY', 'END', 'DATETIME_AS_DATE')
+                            AND CASE WHEN
+                                    ROUND(NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_recovered, 0) + NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_scrap_write_off, 0), 6)
+                                    < ROUND(NVL(CUSTOMRECORD_JJ_WAX_TREE.custrecord_jj_casting_loss, 0), 6) THEN 1 ELSE 0 END IN ('1')
                     `;
 
                     let results = query.runSuiteQLPaged({ query: sqlQuery, pageSize: 1000 });
@@ -9548,8 +9578,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             ["type", "anyof", "Build"],
                             "AND",
                             ["internalid", "anyof", assemblyBuildId],
-                            "AND",
-                            ["mainline", "is", "F"]
+                            // "AND",
+                            // ["mainline", "is", "F"]
                         ],
                         columns: [
                             search.createColumn({ name: "internalid", join: "item", label: "item id" }),
@@ -9567,11 +9597,28 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                             search.createColumn({ name: "custitem_jj_color_stone_shape", join: "item", label: "Stone Shape (CS)" }),
                             search.createColumn({ name: "custitem_jj_colorstonecolour", join: "item", label: "Stone Colour (CS)" }),
+
+                            search.createColumn({ name: "custitem_jj_category_group", join: "item", label: "category_group" }),
+                            search.createColumn({ name: "location", label: "location" })
                         ]
                     });
 
                     let metalQualityIds = new Set();
+                    let itemCategoryGroup = null;
+                    let itemLocation = null;
                     componentSearch.run().each(result => {
+                        // skip lines that are 0
+                        let lineValue = parseInt(result.getValue("line") || 0, 10);
+                        if (lineValue === 0) {
+                            // capture category and location for zero lines (first occurrence)
+                            if (!itemCategoryGroup) {
+                                itemCategoryGroup = result.getValue({ name: "custitem_jj_category_group", join: "item" }) || null;
+                            }
+                            if (!itemLocation) {
+                                itemLocation = result.getValue({ name: "location" }) || null;
+                            }
+                            return true;
+                        }
 
                         let materialTypeId = result.getValue({ name: "cseg_jj_raw_type", join: "account" }) || "";
                         let quantity = Math.abs(parseFloat(result.getValue("quantity")) || 0);
@@ -9584,6 +9631,9 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         return true;
                     });
 
+                    let chargeTypeMap = this.getOtherCharges(itemCategoryGroup, itemLocation);
+                    log.debug("chargeTypeMap", chargeTypeMap);
+
                     const metalQualityIdArray = Array.from(metalQualityIds);
                     log.debug("Metal Quality IDs", metalQualityIdArray);
 
@@ -9591,6 +9641,12 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     log.debug("Metal Quality → Purity Map", metalQualityPurityMap);
 
                     componentSearch.run().each(result => {
+                        let lineNum = Number(result.getValue("line"));
+                        // skip lines that are 0
+                        if (lineNum === 0) {
+                            return true;
+                        }
+
                         // log.debug("result", result);
                         let materialTypeId = result.getValue({ name: "cseg_jj_raw_type", join: "account" }) || "Unknown";
                         log.debug("Material Type ID", materialTypeId);
@@ -9630,8 +9686,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             }
                         }
 
-                        let lineNum = result.getValue("line");
-
                         if (!processedLines.has(lineNum)) {
                             processedLines.add(lineNum);
 
@@ -9654,31 +9708,25 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                 groupedAmount[MATERIAL_TYPE_ID_ALLOY].totalQuantity += Number(quantity || 0) - (Number(quantity || 0) * purity);
                             }
 
-                            // if (!groupedAmount[materialTypeId]) {
-                            //     groupedAmount[materialTypeId] ={ totalQuantity : 0 };
-                            // } else {
-                            //     groupedAmount[materialTypeId].totalQuantity = 0;
-                            // }
-
                             groupedAmount[materialTypeId] = groupedAmount[materialTypeId] || { totalQuantity: 0 };
                             // groupedAmount[materialTypeId].totalQuantity = Number(groupedAmount[materialTypeId].totalQuantity || 0) + Number(quantity || 0);
                             groupedAmount[materialTypeId].totalQuantity = Number(groupedAmount[materialTypeId].totalQuantity || 0) + (purity && materialTypeId != JEWELRY_TYPE_ID ? Number(quantity || 0) * purity : Number(quantity || 0));
 
                             if (stoneQualityGroup == PARTY_DIAMOND_QUALITY) {
-                                // if (!groupedAmount["party_diamond"]) {
-                                //     groupedAmount["party_diamond"] = { totalQuantity : 0 };
-                                // } else {
-                                //     groupedAmount["party_diamond"].totalQuantity = 0;
-                                // }
                                 groupedAmount["party_diamond"] = groupedAmount["party_diamond"] || { totalQuantity: 0 };
                                 groupedAmount["party_diamond"].totalQuantity = Number(groupedAmount["party_diamond"].totalQuantity || 0) + Number(quantity || 0);
                             }
 
-                            if (itemId && Number(itemId) == LABOUR_OVERHEADS_CHARGE_ITEM_ID) {
+                            // if (itemId && Number(itemId) == LABOUR_OVERHEADS_CHARGE_ITEM_ID) {
+                            const chargeEntry = chargeTypeMap.find(entry => String(entry.chargeItem) === String(itemId));
+                            const chargeType = chargeEntry ? chargeEntry.chargeType : null;
+                            if (itemId && chargeType && chargeType == CHARGE_TYPES.LABOUR_OVERHEADS_CHARGE) {
                                 groupedAmount["labour_overheads"] = groupedAmount["labour_overheads"] || { totalCreditAmount: quantity, totalQuantity: quantity };
-                            } else if (itemId && Number(itemId) == NET_LOSS_CHARGE_ITEM_ID) {
+                                // } else if (itemId && Number(itemId) == NET_LOSS_CHARGE_ITEM_ID) {
+                            } else if (itemId && chargeType && chargeType == CHARGE_TYPES.NET_LOSS_CHARGE) {
                                 groupedAmount["net_loss"] = groupedAmount["net_loss"] || { totalCreditAmount: quantity, totalQuantity: quantity };
-                            } else if (itemId && Number(itemId) == FINDING_ITEM_SERVICE_ID) {
+                                // } else if (itemId && Number(itemId) == FINDING_ITEM_SERVICE_ID) {
+                            } else if (itemId && chargeType && chargeType == CHARGE_TYPES.FINDING_ITEM_SERVICE) {
                                 groupedAmount["finding_service"] = groupedAmount["finding_service"] || { totalCreditAmount: quantity, totalQuantity: quantity };
                             }
                         }
@@ -9693,89 +9741,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                         return true;
                     });
-
-                    // if (serialLotArray.length > 0) {
-                    //     let totalGoldWeight = 0, totalDiamondWeight = 0, totalColorStoneWeight = 0, totalPartyDiamondWeight = 0;
-                    //     let totalGoldAmount = 0, totalDiamondAmount = 0, totalColorStoneAmount = 0, totalPartyDiamondAmount = 0, totalMakingChargeAmount = 0;
-
-                    //     let lotSearch = search.create({
-                    //         type: "inventorynumber", // Use custom type if applicable
-                    //         filters: [["internalid", "anyof", serialLotArray]],
-                    //         columns: [
-                    //             "custitemnumber_jj_serial_num_net_weight",
-                    //             "custitemnumber_jj_serial_num_diamond_weight",
-                    //             "custitemnumber_jj_serial_num_cs_weight",
-                    //             "custitemnumber_jj_serial_num_partydiamond_wt",
-                    //             "custitemnumber_jj_cost_gold",
-                    //             "custitemnumber_jj_cost_diamond",
-                    //             "custitemnumber_jj_cost_color_stone",
-                    //             "custitemnumber_jj_cost_making_charge",
-                    //             "custitemnumber_jj_cost_party_diamond",
-                    //         ]
-                    //     });
-
-                    //     lotSearch.run().each(res => {
-                    //         totalGoldWeight += parseFloat(res.getValue("custitemnumber_jj_serial_num_net_weight") || 0);
-                    //         totalDiamondWeight += parseFloat(res.getValue("custitemnumber_jj_serial_num_diamond_weight") || 0) / CARATS_TO_GRAMS_CONST;
-                    //         totalColorStoneWeight += parseFloat(res.getValue("custrecord_colorstone_weight") || 0) / CARATS_TO_GRAMS_CONST;
-                    //         totalPartyDiamondWeight += parseFloat(res.getValue("custitemnumber_jj_serial_num_partydiamond_wt") || 0) / CARATS_TO_GRAMS_CONST;
-
-                    //         totalGoldAmount += parseFloat(res.getValue("custitemnumber_jj_cost_gold") || 0);
-                    //         totalDiamondAmount += parseFloat(res.getValue("custitemnumber_jj_cost_diamond") || 0);
-                    //         totalColorStoneAmount += parseFloat(res.getValue("custitemnumber_jj_cost_color_stone") || 0);
-                    //         totalMakingChargeAmount = parseFloat(res.getValue("custitemnumber_jj_cost_making_charge") || 0);
-                    //         totalPartyDiamondAmount = parseFloat(res.getValue("custitemnumber_jj_cost_party_diamond") || 0);
-
-                    //         return true;
-                    //     });
-
-                    //     log.debug("Total Gold Weight", totalGoldWeight);
-
-                    //     groupedAmount[GOLD_TYPE_ID].totalQuantity = (groupedAmount[GOLD_TYPE_ID]?.totalQuantity || 0) + totalGoldWeight;
-                    //     groupedAmount[GOLD_TYPE_ID].totalCreditAmount = (groupedAmount[GOLD_TYPE_ID]?.totalCreditAmount || 0) + totalGoldAmount;
-
-                    //     log.debug("Total Diamond Weight", totalDiamondWeight);
-
-                    //     groupedAmount[DIAMOND_TYPE_ID].totalQuantity = (groupedAmount[DIAMOND_TYPE_ID]?.totalQuantity || 0) + totalDiamondWeight;
-                    //     groupedAmount[DIAMOND_TYPE_ID].totalCreditAmount = (groupedAmount[DIAMOND_TYPE_ID]?.totalCreditAmount || 0) + totalDiamondAmount;
-
-                    //     log.debug("Total Color Stone Weight", totalColorStoneWeight);
-
-                    //     groupedAmount[COLORSTONE_TYPE_ID].totalQuantity = (groupedAmount[COLORSTONE_TYPE_ID]?.totalQuantity || 0) + totalColorStoneWeight;
-                    //     groupedAmount[COLORSTONE_TYPE_ID].totalCreditAmount = (groupedAmount[COLORSTONE_TYPE_ID]?.totalCreditAmount || 0) + totalColorStoneAmount;
-
-                    //     log.debug("Total Party Diamond Weight", totalPartyDiamondWeight);
-
-                    //     groupedAmount["party_diamond"].totalQuantity = (groupedAmount["party_diamond"]?.totalQuantity || 0) + totalPartyDiamondWeight;
-                    //     groupedAmount["party_diamond"].totalCreditAmount = (groupedAmount["party_diamond"]?.totalCreditAmount || 0) + totalPartyDiamondAmount;
-
-                    //     groupedAmount[MAKING_CHARGE_TYPE_ID].totalCreditAmount = (groupedAmount[MAKING_CHARGE_TYPE_ID]?.totalCreditAmount || 0) + totalMakingChargeAmount;
-
-                    //     // if (groupedAmount[JEWELRY_TYPE_ID]) {
-                    //     //     delete groupedAmount[JEWELRY_TYPE_ID];
-                    //     // }
-
-                    //     groupedAmount[JEWELRY_TYPE_ID] = {
-                    //         ...groupedAmount[JEWELRY_TYPE_ID],
-                    //         gold: {
-                    //             totalQuantity: totalGoldWeight,
-                    //             totalCreditAmount: totalGoldAmount
-                    //         },
-                    //         diamond: {
-                    //             totalQuantity: totalDiamondWeight,
-                    //             totalCreditAmount: totalDiamondAmount
-                    //         },
-                    //         colorstone: {
-                    //             totalQuantity: totalColorStoneWeight,
-                    //             totalCreditAmount: totalColorStoneAmount
-                    //         },
-                    //         party_diamond: {
-                    //             totalQuantity: totalPartyDiamondWeight,
-                    //             totalCreditAmount: totalPartyDiamondAmount
-                    //         }
-                    //     };
-
-                    // }
 
                     if (serialLotArray.length > 0) {
                         const lotSearch = search.create({
@@ -10235,7 +10200,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              * @param {Array<string|number>} departmentIds - Array of department internal IDs.
              * @returns {Object} A mapping object with department ID as key and an array of employees (value, name) as value.
              */
-            getDepartmentEmployeesMap(departmentIds, allEmployees) {
+            getDepartmentEmployeesMap(departmentIds, allEmployees, locations) {
                 try {
                     if (!Array.isArray(departmentIds) || departmentIds.length === 0) {
                         return {};
@@ -10246,6 +10211,13 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         "AND", ["internalid", "anyof", departmentIds],
                         "AND", ["custrecord_jj_mandept_employees.isinactive", "is", "F"]
                     ];
+
+                    if (locations) {
+                        const locationArr = Array.isArray(locations) ? locations : [locations];
+                        if (locationArr.length > 0) {
+                            filters.push("AND", ["custrecord_jj_mandept_location", "anyof", locationArr]);
+                        }
+                    }
 
                     let columns = [
                         search.createColumn({ name: "internalid" }),
@@ -12886,7 +12858,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             search.createColumn({ name: "quantity", label: "quantity" }),
                             search.createColumn({ name: "type", join: "item", label: "type" }),
                             search.createColumn({ name: "cost", join: "item", label: "purchase_price" }),
-                            search.createColumn({ name: "line", label: "line_id" })
+                            search.createColumn({ name: "line", label: "line_id" }),
+                            search.createColumn({ name: "custcol_jj_charge_type", label: "charge_type" })
                         ]
                     });
 
@@ -12906,7 +12879,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             updatedQuantity: Number(row.quantity?.value || 0),
                             itemType: row.type?.value || '',
                             purchasePrice: row.purchase_price?.value || '',
-                            woLineNo: row.line_id?.value || ''
+                            woLineNo: row.line_id?.value || '',
+                            chargeType: Number(row.charge_type?.value || 0)
                         });
                     });
 
@@ -13181,15 +13155,16 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             }
 
                             if (statusId) {
-                                let key = deptFields.bin + '_' + deptFields.location;
-                                log.debug('Department HOD check', { dept: dept.value, deptName: dept.name, hod: deptFields.hod });
+                                let key = deptFields.bin + '_' + deptFields.location; // TODO: Need key to get unique department
+                                // log.debug('Department HOD check', { dept: dept.value, deptName: dept.name, hod: deptFields.hod });
                                 departmentMap[key] = {
                                     deptId: dept.value,
                                     deptName: dept.name,
                                     bin: deptFields.bin,
                                     location: deptFields.location,
                                     statusId: statusId,
-                                    hod: deptFields.hod
+                                    hod: deptFields.hod,
+                                    isCastingDept: deptFields.hasBulkMovement && !deptFields.hasBulkAcknowled
                                 };
 
                                 // Collect all status IDs for the search
@@ -13205,7 +13180,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         }
                     });
 
-                    log.debug('Department map created', { count: Object.keys(departmentMap).length, statusIds: allStatusIds });
+                    // log.debug('Department map created', { count: Object.keys(departmentMap).length, statusIds: allStatusIds });
 
                     if (allStatusIds.length === 0) {
                         log.debug('No valid status IDs found', 'Returning empty array');
@@ -13219,10 +13194,9 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         "AND", ["binnumber", "noneof", "@NONE@"],
                         "AND", ["location", "noneof", "@NONE@"]
                     ];
-                    
+
                     if (locations) {
                         const locationArr = Array.isArray(locations) ? locations : [locations];
-
                         if (locationArr.length > 0) {
                             filters.push("AND", ["location", "anyof", locationArr]);
                         }
@@ -13258,7 +13232,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         let location = result.getValue({ name: "location", summary: "GROUP" });
                         let quantity = result.getValue({ name: "available", summary: "SUM" });
 
-                        let key = bin + '_' + location;
+                        let key = bin + '_' + location; // TODO: Need key to get unique department
 
                         if (departmentMap[key] && parseFloat(quantity) > 0) {
                             let deptInfo = departmentMap[key];
@@ -13284,19 +13258,20 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                             hodName = [first, middle, last].filter(Boolean).join(' ').trim();
                                         }
                                         hodData = { value: deptInfo.hod, text: hodName };
-                                        log.debug('HOD fetched', { hodId: deptInfo.hod, hodName: hodName });
+                                        // log.debug('HOD fetched', { hodId: deptInfo.hod, hodName: hodName });
                                     } catch (e) {
                                         log.error('Error fetching HOD name', { hodId: deptInfo.hod, error: e.message });
                                         hodData = { value: deptInfo.hod, text: deptInfo.hod };
                                     }
                                 }
 
-                                log.debug('Adding department with HOD', { deptId: deptInfo.deptId, deptName: deptInfo.deptName, hod: hodData });
+                                // log.debug('Adding department with HOD', { deptId: deptInfo.deptId, deptName: deptInfo.deptName, hod: hodData });
 
                                 departmentsWithLoss.push({
                                     value: deptInfo.deptId,
                                     name: deptInfo.deptName,
-                                    hod: hodData
+                                    hod: hodData,
+                                    isCastingDept: deptInfo.isCastingDept
                                 });
                             }
                         }
@@ -13304,7 +13279,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         return true; // Continue iteration
                     });
 
-                    log.debug('Departments with loss found', { count: departmentsWithLoss.length, departments: departmentsWithLoss });
+                    // log.debug('Departments with loss found', { count: departmentsWithLoss.length, departments: departmentsWithLoss });
 
                     // Step 5: Filter by user permissions if not admin
                     // if (!isAdmin && userId) {
@@ -13514,7 +13489,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              *
              * @returns {Array} Array of { value: internalId, text: tranid, trandate: trandate }
              */
-            getLossTransactions(departmentId) {
+            getLossTransactions(departmentId, locations) {
                 try {
                     let filters = [
                         ["type", "anyof", "StatChng"],
@@ -13528,7 +13503,14 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         filters.push("AND", ["custbody_jj_loss_transferred_dept", "anyof", [departmentId]]);
                     }
 
-                    log.debug('getLossTransactions filters', JSON.stringify(filters));
+                    if (locations) {
+                        const locationArr = Array.isArray(locations) ? locations : [locations];
+                        if (locationArr.length > 0) {
+                            filters.push("AND", ["location", "anyof", locationArr]);
+                        }
+                    }
+
+                    // log.debug('getLossTransactions filters', JSON.stringify(filters));
 
                     let inventorystatuschangeSearchObj = search.create({
                         type: "inventorystatuschange",
@@ -13906,8 +13888,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         let foundRecoveryDate = null;
                         for (let i = 0; i < allDates.length; i++) {
                             let dateTs = parseYMD(allDates[i]).getTime();
-                            if (dateTs >= currentTs)
-                            {
+                            if (dateTs >= currentTs) {
                                 foundRecoveryDate = allDates[i];
                                 break;
                             }
@@ -14269,6 +14250,52 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     return existingBagCoreTrackingMap;
                 }
             },
+
+            /**
+             * Fetch other charges for the provided category groups
+             * @param {Array} categoryGroups - Unique category group IDs
+             * @returns {Array} - Other charges with related child record details
+             */
+            getOtherCharges(categoryGroups, location) {
+                if (!categoryGroups || categoryGroups.length === 0) {
+                    log.debug('No Category Groups Provided', 'The categoryGroups array is empty.');
+                    return [];
+                }
+                if (!location) {
+                    log.debug('No Location Provided', 'The location is empty.');
+                    return [];
+                }
+                const otherChargesSearch = search.create({
+                    type: 'customrecord_jj_other_charge_item_map',
+                    filters: [
+                        ["isinactive", "is", "F"],
+                        "AND", ["custrecord_jj_category_other_charges.isinactive", "is", "F"],
+                        "AND", ["custrecord_jj_other_charge_item.isinactive", "is", "F"],
+                        "AND", ["custrecord_jj_category_other_charges.custrecord_jj_cat_group", "anyof", categoryGroups],
+                        "AND", ["custrecord_jj_category_other_charges.custrecord_jj_cat_group_location", "anyof", location]
+                    ],
+                    columns: [
+                        search.createColumn({ name: "custrecord_jj_other_charge_item", label: "Other Charge Item" }),
+                        search.createColumn({ name: "custrecord_jj_charge_hours_worked", label: "Hours Worked" }),
+                        search.createColumn({ name: "custrecord_jj_charge_type", label: "Charge Type" }),
+                        // search.createColumn({ name: "cost", join: "CUSTRECORD_JJ_OTHER_CHARGE_ITEM", label: "Purchase Price" })
+                    ]
+                });
+
+                const results = [];
+                otherChargesSearch.run().each(result => {
+                    results.push({
+                        // categoryOtherCharge: result.getValue('custrecord_jj_category_other_charges'),
+                        chargeItem: result.getValue('custrecord_jj_other_charge_item'),
+                        hoursWorked: parseFloat(result.getValue('custrecord_jj_charge_hours_worked') || 0),
+                        chargeType: Number(result.getValue('custrecord_jj_charge_type') || 0),
+                        // cost: parseFloat(result.getValue({ name: 'cost', join: 'CUSTRECORD_JJ_OTHER_CHARGE_ITEM' }) || 0)
+                    });
+                    return true;
+                });
+
+                return results;
+            }
         };
         jjUtil.applyTryCatch(searchResults, 'searchResults');
         return searchResults;

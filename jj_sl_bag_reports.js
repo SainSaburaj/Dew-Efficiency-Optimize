@@ -23,20 +23,21 @@
  * law and international treaties. Unauthorized reproduction or distribution of this script, or any portion of it,
  * may result in severe civil and criminal penalties and will be prosecuted to the maximum extent possible under law.
  * **************************************************************************************************************************/
-define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/https', 'N/record', '../Libraries/jj_cm_ns_utility.js', '../Models/jj_cm_savedsearches.js', './jj_cm_functions.js', '../Models/jj_cm_efficiency_searches.js'],
+define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/https', 'N/record', 'N/task', '../Libraries/jj_cm_ns_utility.js', '../Models/jj_cm_savedsearches.js', './jj_cm_functions.js', '../Models/jj_cm_efficiency_searches.js'],
     /**
  * @param{runtime} runtime
  * @param{search} search
  * @param{serverWidget} serverWidget
  * @param{format} format
  * @param{record} record
+ * @param{task} task
  * @param{jj_cm_ns_utility} jj_cm_ns_utility
  * @param{cm_model} cm_model
  * @param{cm_functions} cm_functions
  * @param{cm_efficiency} cm_efficiency
  */
-    (runtime, search, serverWidget, file, format, https, record, jj_cm_ns_utility, cm_model, cm_functions, cm_efficiency) => {
-        const CASTING_DEPARTMENT_ID = 9;
+    (runtime, search, serverWidget, file, format, https, record, task, jj_cm_ns_utility, cm_model, cm_functions, cm_efficiency) => {
+        // const CASTING_DEPARTMENT_ID = 9;
         const LOC_TRANS_REASON_CODE = 51; // Reason code for Location Transfer operations
         // const TREE_CUTTING_DEPARTMENT_ID = 10;
         // const BARCODING_AND_FG_DEPT_ID = 25;
@@ -48,7 +49,6 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             listDepartments() {
                 try {
                     let requestBody = rootContext.body;
-                    log.debug('rootContext.body', rootContext.body);
                     let locations = requestBody?.locations || [];
                     let departmentList;
                     // if (requestBody?.department_name == "Casting") {
@@ -60,7 +60,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                         // Get only departments that have actual loss items
                         let materialType = requestBody?.material_type || 'gold_type';
                         let isInProgress = requestBody?.isInProgress || false;
-                        let includeCastingLoss = requestBody?.include_casting_loss || false;
+                        // let includeCastingLoss = requestBody?.include_casting_loss || false;
 
                         departmentList = cm_model.getDepartmentsWithLoss(
                             materialType,
@@ -70,24 +70,24 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                             locations
                         );
 
-                        // When write-off page requests, also include departments with lossStatus inventory
-                        // (e.g. Casting which bypasses In Progress and recovers directly from Loss)
-                        if (includeCastingLoss && isInProgress) {
-                            let lossModeDepts = cm_model.getDepartmentsWithLoss(
-                                materialType,
-                                false, // lossStatus
-                                requestBody?.user_id,
-                                requestBody?.all_department,
-                                locations
-                            );
-                            // Merge — add any loss-mode dept not already in the list
-                            let existingIds = new Set(departmentList.map(d => d.value));
-                            lossModeDepts.forEach(d => {
-                                if (!existingIds.has(d.value)) {
-                                    departmentList.push(d);
-                                }
-                            });
-                        }
+                        // // When write-off page requests, also include departments with lossStatus inventory
+                        // // (e.g. Casting which bypasses In Progress and recovers directly from Loss)
+                        // if (includeCastingLoss && isInProgress) {
+                        //     let lossModeDepts = cm_model.getDepartmentsWithLoss(
+                        //         materialType,
+                        //         false, // lossStatus
+                        //         requestBody?.user_id,
+                        //         requestBody?.all_department,
+                        //         locations
+                        //     );
+                        //     // Merge — add any loss-mode dept not already in the list
+                        //     let existingIds = new Set(departmentList.map(d => d.value));
+                        //     lossModeDepts.forEach(d => {
+                        //         if (!existingIds.has(d.value)) {
+                        //             departmentList.push(d);
+                        //         }
+                        //     });
+                        // }
                     } else if (requestBody?.params == "user_specific") {
                         departmentList = cm_model.getAllManufacturingDepartments(null, requestBody?.params, requestBody?.all_department, requestBody?.user_id, locations);
                     } else if (requestBody?.params == "location_transfer") {
@@ -213,7 +213,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             listBagComponents() {
                 try {
                     let requestBody = rootContext.body;
-                    log.debug('getBagItemDetails requestBody', requestBody);
+                    // log.debug('getBagItemDetails requestBody', requestBody);
 
                     let bagId = requestBody.bag_id ? requestBody.bag_id : null;
                     let bagComponents = cm_model.getBagItemDetails(bagId);
@@ -314,9 +314,10 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     let bagSearchKey = requestBody.bag_search_key || null;
                     let params = requestBody.params || null; // bag_movement
                     let pageSize = requestBody.page_size ? requestBody.page_size : null;
+                    let locations = requestBody?.locations;
 
                     // getBagsReadyToMove parameters (bags, department, bagSearchKey, pageIndex, params, manufacturer, pageSize)
-                    let bagMovementList = cm_model.getBagsReadyToMove(null, fromDepartmentId, bagSearchKey, pageIndex, params, fromManufacturerId, pageSize);
+                    let bagMovementList = cm_model.getBagsReadyToMove(null, fromDepartmentId, bagSearchKey, pageIndex, params, fromManufacturerId, pageSize, null, locations);
 
                     // log.debug('bagMovementList', bagMovementList);
                     // Handle both array (when pageIndex is null) and object (when pageIndex is provided) responses
@@ -423,24 +424,28 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     let materialType = requestBody.material_type; // gold_type, diamond_type, color_stone_type
                     let params = requestBody.params || "";
                     let isInProgress = requestBody.isInProgress || false;
+                    // let locations = requestBody.locations;
+                    let isCastingDept = requestBody?.isCastingDept || false;
 
                     if (!jj_cm_ns_utility.checkForParameter(departmentId)) {
                         return { status: 'ERROR', reason: 'Invalid Department Id', data: [] };
                     }
 
-                    if (jj_cm_ns_utility.checkForParameter(params) && params == 'recovery' && departmentId == CASTING_DEPARTMENT_ID && isInProgress) {
+                    let deptFields = cm_model.getDepartmentFields(departmentId);
+                    let locationId = deptFields?.location;
+                    let binNumber = deptFields?.bin;
+
+                    // if (jj_cm_ns_utility.checkForParameter(params) && params == 'recovery' && departmentId == CASTING_DEPARTMENT_ID && isInProgress) {
+                    if (jj_cm_ns_utility.checkForParameter(params) && params == 'recovery' && isCastingDept && isInProgress) {
                         return { status: 'SUCCESS', reason: 'No Result Availble', data: [] };
-                    } else if (jj_cm_ns_utility.checkForParameter(params) && (params == 'recovery' || params == 'write-off') && departmentId == CASTING_DEPARTMENT_ID) {
-                        return cm_model.getTodaysWaxTreeLoss();
+                    // } else if (jj_cm_ns_utility.checkForParameter(params) && (params == 'recovery' || params == 'write-off') && departmentId == CASTING_DEPARTMENT_ID) {
+                    } else if (jj_cm_ns_utility.checkForParameter(params) && (params == 'recovery' || params == 'write-off') && isCastingDept) {
+                        return cm_model.getTodaysWaxTreeLoss(locationId);
                     }
 
                     if (!jj_cm_ns_utility.checkForParameter(materialType)) {
                         return { status: 'ERROR', reason: 'Invalid Material Type', data: [] };
                     }
-
-                    let deptFields = cm_model.getDepartmentFields(departmentId);
-                    let locationId = deptFields?.location;
-                    let binNumber = deptFields?.bin;
 
                     if (!locationId || !binNumber) {
                         return { status: 'ERROR', reason: 'No location or Bin found for the department', data: [] };
@@ -602,8 +607,6 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             getTotalMaterialWeights() {
                 try {
                     let requestBody = rootContext.body;
-                    log.debug('getTotalMaterialWeights requestBody', requestBody);
-
                     let bagIds = requestBody.bag_ids ? requestBody.bag_ids : null;
                     let params = requestBody.params ? requestBody.params : null;
 
@@ -620,12 +623,11 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                         };
                     }
 
-                    log.debug('getTotalMaterialWeights: Processing bagIds:', bagIds);
-
-                    // Get all three weights in one call
-                    let goldWeight = cm_model.getTotalGoldWeightForBags(bagIds);
-                    let diamondWeight = cm_model.getTotalDiamondWeightForBags(bagIds);
-                    let colorStoneWeight = cm_model.getTotalColorStoneWeightForBags(bagIds);
+                    // // Get all three weights in one call
+                    // let goldWeight = cm_model.getTotalGoldWeightForBags(bagIds);
+                    // let diamondWeight = cm_model.getTotalDiamondWeightForBags(bagIds);
+                    // let colorStoneWeight = cm_model.getTotalColorStoneWeightForBags(bagIds);
+                    let { goldWeight, diamondWeight, colorStoneWeight } = cm_model.getTotalMaterialWeightsForBags(bagIds);
 
                     log.debug('getTotalMaterialWeights: Final weights:', { goldWeight, diamondWeight, colorStoneWeight });
 
@@ -1359,8 +1361,9 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     let requestBody = rootContext.body;
                     log.debug('listMetal rootContext.body', rootContext.body);
                     let departmentId = requestBody?.department_id || "";
+                    let isCastingDept = requestBody?.isCastingDept || false;
 
-                    let metalList = cm_model.getMetals(departmentId);
+                    let metalList = cm_model.getMetals(departmentId, isCastingDept);
                     log.debug('metalList', metalList);
                     if (metalList && metalList.length) {
                         return { status: 'SUCCESS', reason: 'Metal Listed', data: metalList };
@@ -1806,6 +1809,8 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     let startDate = requestBody?.startDate;
                     let endDate = requestBody?.endDate;
                     let isRepairOnly = requestBody?.isRepairOnly;
+                    let departmentId = requestBody?.departmentId;
+                    let employeeId = requestBody?.employeeId;
 
                     // Provide default date range if not provided (last 30 days)
                     if (!startDate || !endDate) {
@@ -1822,29 +1827,50 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                         });
                     }
 
-                    // Call appropriate function based on isRepairOnly parameter
+                    // Call appropriate SUMMARY function based on isRepairOnly parameter
+                    // Summary functions return department-level or employee-level aggregates with numerical data only
+                    let options = { departmentId: departmentId, employeeId: employeeId };
                     let efficiencyData;
-                    if (isRepairOnly === true) {
-                        // Repair Efficiency Analysis — repair orders only
-                        efficiencyData = cm_efficiency.getRepairEfficiencyData(locationId, startDate, endDate, isRepairOnly);
-                    } else if (isRepairOnly === false) {
-                        // Production Efficiency Analysis — non-repair orders only
-                        efficiencyData = cm_efficiency.getProductionEfficiencyData(locationId, startDate, endDate);
+                    
+                    if (employeeId) {
+                        // If employeeId is provided, we need full bag and category details, so use buildEfficiencyData
+                        if (isRepairOnly === true) {
+                            options.repairOrderFilter = 'T';
+                            options.includeWaxTree = false;
+                        } else if (isRepairOnly === false) {
+                            options.repairOrderFilter = 'F';
+                            options.includeWaxTree = true;
+                        } else {
+                            options.repairOrderFilter = null;
+                            options.includeWaxTree = true;
+                        }
+                        efficiencyData = cm_efficiency.buildEfficiencyData(locationId, startDate, endDate, options);
                     } else {
-                        // Overall Efficiency Analysis — all operations (repair + production)
-                        efficiencyData = cm_efficiency.getOverallEfficiencyData(locationId, startDate, endDate);
+                        if (isRepairOnly === true) {
+                            // Repair Efficiency Analysis — repair orders only
+                            options.repairOrderFilter = 'T';
+                            options.includeWaxTree = false;
+                            efficiencyData = cm_efficiency.buildSummaryEfficiencyData(locationId, startDate, endDate, options);
+                        } else if (isRepairOnly === false) {
+                            // Production Efficiency Analysis — non-repair orders only
+                            options.repairOrderFilter = 'F';
+                            options.includeWaxTree = true;
+                            efficiencyData = cm_efficiency.buildSummaryEfficiencyData(locationId, startDate, endDate, options);
+                        } else {
+                            // Overall Efficiency Analysis — all operations (repair + production)
+                            options.repairOrderFilter = null;
+                            options.includeWaxTree = true;
+                            efficiencyData = cm_efficiency.buildSummaryEfficiencyData(locationId, startDate, endDate, options);
+                        }
                     }
 
-
                     if (efficiencyData) {
-                        //if (efficiencyData && efficiencyData.length) {
                         return { status: 'SUCCESS', reason: 'Efficiency Data Listed', data: efficiencyData };
                     }
 
                     // If the list is invalid or empty, return an error response object
                     return {
                         status: "ERROR",
-                        // Use jj_cm_ns_utility to determine if there was a specific error; otherwise, state no locations were found
                         reason: jj_cm_ns_utility.ERROR_STACK.length ? "ERROR" : "NO_EFFICIENCY_DATA_FOUND",
                         data: null,
                     };
@@ -1852,6 +1878,64 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                 } catch (error) {
                     log.error('Error listEfficiencyAnalysis', error);
                     return { status: 'ERROR', reason: error.message, data: [] }
+                }
+            },
+
+            exportEfficiencyExcel() {
+                try {
+                    let requestBody = rootContext.body;
+                    let locationId = requestBody?.location;
+                    let startDate = requestBody?.startDate;
+                    let endDate = requestBody?.endDate;
+                    let isRepairOnly = requestBody?.isRepairOnly;
+
+                    let currentUser = runtime.getCurrentUser();
+                    let userId = currentUser.id;
+                    let userEmail = requestBody?.testUserEmail || requestBody?.userEmail || currentUser.email;
+
+                    // NetSuite email.send requires a valid positive Employee internal ID as author.
+                    // If the current user ID is invalid, system (<= 0), or empty, find a valid fallback employee.
+                    if (!userId || parseInt(userId) <= 0) {
+                        try {
+                            let employeeSearch = search.create({
+                                type: 'employee',
+                                filters: [
+                                    ['isinactive', 'is', 'F']
+                                ],
+                                columns: ['internalid']
+                            });
+                            let resultSet = employeeSearch.run().getRange({ start: 0, end: 1 });
+                            if (resultSet && resultSet.length > 0) {
+                                userId = resultSet[0].getValue('internalid');
+                            }
+                        } catch (e) {
+                            log.error('Error finding fallback employee author', e);
+                        }
+                    }
+
+                    log.debug('exportEfficiencyExcel', { locationId, startDate, endDate, isRepairOnly, userId, userEmail });
+
+                    let mrTask = task.create({
+                        taskType: task.TaskType.MAP_REDUCE,
+                        scriptId: 'customscript_jj_mr_efficiency_excel',
+                        deploymentId: 'customdeploy_jj_mr_efficiency_excel',
+                        params: {
+                            'custscript_jj_eff_excel_location': locationId ? String(locationId) : '',
+                            'custscript_jj_eff_excel_start_date': startDate,
+                            'custscript_jj_eff_excel_end_date': endDate,
+                            'custscript_jj_eff_excel_is_repair': isRepairOnly === true ? 'T' : isRepairOnly === false ? 'F' : '',
+                            'custscript_jj_eff_excel_user_id': String(userId),
+                            'custscript_jj_eff_excel_user_email': userEmail
+                        }
+                    });
+
+                    let mrTaskId = mrTask.submit();
+                    log.audit('exportEfficiencyExcel Task Submitted', { mrTaskId });
+
+                    return { status: 'SUCCESS', reason: 'MapReduce Script Scheduled', data: mrTaskId };
+                } catch (error) {
+                    log.error('Error in exportEfficiencyExcel', error);
+                    return { status: 'ERROR', reason: error.message, data: null };
                 }
             },
 
@@ -2012,7 +2096,6 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             listEmployees() {
                 try {
                     let requestBody = rootContext.body;
-                    log.debug('rootContext.body', rootContext.body);
                     let employeeList = cm_model.getEmployees(requestBody.is_hod, requestBody.all_employees);
                     return { status: 'SUCCESS', reason: 'HODs Listed', data: employeeList };
                 } catch (error) {
@@ -2036,7 +2119,6 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             listInventoryAdjustments() {
                 try {
                     let requestBody = rootContext.body;
-                    log.debug('rootContext.body', rootContext.body);
                     if (!requestBody || !jj_cm_ns_utility.checkForParameter(requestBody)) {
                         return { status: 'ERROR', reason: 'No Parameters Found', data: [] };
                     }
@@ -2621,12 +2703,11 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             getDepartmentEmployeesMap() {
                 try {
                     let requestBody = rootContext.body;
-                    log.debug('getDepartmentEmployeesMap rootContext.body', rootContext.body);
+                    let locations = requestBody?.locations;
                     let employeeListMap = {};
                     if (requestBody.departments && requestBody.departments.length > 0) {
-                        employeeListMap = cm_model.getDepartmentEmployeesMap(requestBody.departments, requestBody.all_employees);
+                        employeeListMap = cm_model.getDepartmentEmployeesMap(requestBody.departments, requestBody.all_employees, locations);
                     }
-                    log.debug("employeeListMap", employeeListMap);
                     return { status: 'SUCCESS', reason: 'HODs Listed', data: employeeListMap };
                 } catch (error) {
                     log.error('error @ getDepartmentEmployeesMap', error);
@@ -2934,10 +3015,9 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             getLossTransactions() {
                 try {
                     const requestBody = rootContext.body;
-                    log.debug('getLossTransactions requestBody', requestBody);
-                    const departmentId = (requestBody && requestBody.department_id) ? requestBody.department_id : null;
-                    log.debug('getLossTransactions departmentId', departmentId);
-                    return cm_model.getLossTransactions(departmentId);
+                    let departmentId = (requestBody && requestBody.department_id) ? requestBody.department_id : null;
+                    let locations = requestBody?.locations || null;
+                    return cm_model.getLossTransactions(departmentId, locations);
                 } catch (error) {
                     log.error('error @ getLossTransactions', error);
                     return { status: 'ERROR', reason: error.message, data: [] };
@@ -2987,21 +3067,18 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                 }
             },
             getRecoveryDataByDeptAndDateRange() {
-                try
-                {
+                try {
                     const requestBody = rootContext.body;
                     const startDate = (requestBody && requestBody.startDate) || '';
                     const endDate = (requestBody && requestBody.endDate) || '';
                     const departmentNames = (requestBody && requestBody.departmentNames) || [];
 
-                    if (!startDate || !endDate)
-                    {
+                    if (!startDate || !endDate) {
                         return { status: 'SUCCESS', reason: 'Invalid or missing date range', data: { recoveryMap: {} } };
                     }
 
                     // Support both single (legacy) and batch calls
-                    if (Array.isArray(departmentNames) && departmentNames.length > 0)
-                    {
+                    if (Array.isArray(departmentNames) && departmentNames.length > 0) {
                         return cm_model.getAvgRecoveryPercentageBatch(startDate, endDate, departmentNames);
                     }
 
@@ -3138,17 +3215,17 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             },
             parseJSON() {
                 try {
-                    log.debug('parseJSON - Raw body', {
-                        body: this.body,
-                        type: typeof this.body,
-                        length: this.body ? this.body.length : 0
-                    });
+                    // log.debug('parseJSON - Raw body', {
+                    //     body: this.body,
+                    //     type: typeof this.body,
+                    //     length: this.body ? this.body.length : 0
+                    // });
 
                     if (this.body && this.body.trim() !== '') {
                         this.body = JSON.parse(this.body);
-                        log.debug('parseJSON - Parsed successfully', this.body);
+                        // log.debug('parseJSON - Parsed successfully', this.body);
                     } else {
-                        log.debug('parseJSON - Empty body, setting to empty object');
+                        // log.debug('parseJSON - Empty body, setting to empty object');
                         this.body = {};
                     }
                 }
@@ -3248,6 +3325,8 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                             return apiMethods.getSpecificMaterialForFG();
                         case "listEfficiencyAnalysis":
                             return apiMethods.listEfficiencyAnalysis();
+                        case "exportEfficiencyExcel":
+                            return apiMethods.exportEfficiencyExcel();
                         case "createCustomFGSerials":
                             return apiMethods.createCustomFGSerials();
                         case "createGoldLossWriteOff":
@@ -3339,7 +3418,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             * @returns {boolean}
             */
             sendResponse(responseObj) {
-                log.debug('responseObj', responseObj)
+                // log.debug('responseObj', responseObj)
                 let returnVal;
                 const wrapInEscapedBody = (data) => {
                     return encodeURIComponent(JSON.stringify(data));
@@ -3347,7 +3426,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                 const unwrapInEscapedBody = (data) => {
                     return JSON.parse(decodeURIComponent(data));
                 };
-                log.debug('this.method', this.method);
+                // log.debug('this.method', this.method);
                 // if (this.method === 'GET') {
                 //     let filePath = '../Views/FrontEndSPA/index.html';// 173013
                 //     let fileObj = file.load({ id: filePath });
@@ -3375,7 +3454,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     if (responseObj.componentInventoryTracking) {
                         returnVal.componentInventoryTracking = wrapInEscapedBody(responseObj.componentInventoryTracking);
                     }
-                    log.debug('returnVal', returnVal);
+                    // log.debug('returnVal', returnVal);
                     return this.scriptContext.response.write(`${JSON.stringify(returnVal)}`, true)
                 }
                 return this.scriptContext.response.write(`Invalid method: ${this.method}`, true)
