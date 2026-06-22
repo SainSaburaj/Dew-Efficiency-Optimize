@@ -1885,6 +1885,8 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                 try {
                     let requestBody = rootContext.body;
                     let locationId = requestBody?.location;
+                    let exportLevel = requestBody?.exportLevel || 'department';
+                    let combinedLocation = locationId ? String(locationId) + '|' + exportLevel : '';
                     let startDate = requestBody?.startDate;
                     let endDate = requestBody?.endDate;
                     let isRepairOnly = requestBody?.isRepairOnly;
@@ -1913,14 +1915,14 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                         }
                     }
 
-                    log.debug('exportEfficiencyExcel', { locationId, startDate, endDate, isRepairOnly, userId, userEmail });
+                    log.debug('exportEfficiencyExcel', { locationId, exportLevel, startDate, endDate, isRepairOnly, userId, userEmail });
 
                     let mrTask = task.create({
                         taskType: task.TaskType.MAP_REDUCE,
                         scriptId: 'customscript_jj_mr_efficiency_excel',
                         deploymentId: 'customdeploy_jj_mr_efficiency_excel',
                         params: {
-                            'custscript_jj_eff_excel_location': locationId ? String(locationId) : '',
+                            'custscript_jj_eff_excel_location': combinedLocation,
                             'custscript_jj_eff_excel_start_date': startDate,
                             'custscript_jj_eff_excel_end_date': endDate,
                             'custscript_jj_eff_excel_is_repair': isRepairOnly === true ? 'T' : isRepairOnly === false ? 'F' : '',

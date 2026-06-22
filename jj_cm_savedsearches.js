@@ -186,7 +186,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         "AND", ["custrecord_jj_oprtns_bagno.custrecord_jj_baggen_merge", "is", "F"],
                     ];
                     if (!params || params != "rejection") {
-                        // log.debug("getBagsReadyToMove if !params || params != rejection");
                         filters.push(
                             "AND", ["custrecord_jj_oprtns_bagno.custrecord_jj_is_rejected", "is", "F"],
                             "AND", ["custrecord_jj_oprtns_bagcore.custrecord_jj_bagcore_is_rejected", "is", "F"],
@@ -204,16 +203,13 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     }
 
                     // if (manufacturer) { // for bag movement in bag management processes
-                    //     // log.debug("getBagsReadyToMove if manufacturer");
                     //     filters.push("AND", ["custrecord_jj_oprtns_department.custrecord_jj_mandept_hod", "anyof", manufacturer]);
                     // }
 
                     if (bags && bags.length > 0 && department) {
-                        // log.debug("getBagsReadyToMove if bags && bags.length > 0 && department");
                         filters.push("AND", ["custrecord_jj_oprtns_bagno", "anyof", bags]);
                         filters.push("AND", ["custrecord_jj_oprtns_department", "anyof", department]);
                     } else if (bags && bags.length > 0) { // for list active bags for rejection
-                        // log.debug("getBagsReadyToMove else if bags && bags.length > 0");
                         filters.push("AND", ["custrecord_jj_oprtns_bagno", "anyof", bags]);
                         filters.push(
                             "AND",
@@ -228,7 +224,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             ]
                         );
                     } else if (department && bagSearchKey) {
-                        // log.debug("getBagsReadyToMove else if department && bagSearchKey");
                         filters.push("AND", ["custrecord_jj_oprtns_department", "anyof", department]);
                         filters.push("AND", ["custrecord_jj_oprtns_bagno.idtext", "contains", bagSearchKey]);
                         filters.push(
@@ -244,7 +239,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             ]
                         );
                     } else if (department && params == "bag_movement") {
-                        // log.debug("getBagsReadyToMove else if department && params == 'bag_movement'");
                         filters.push("AND", ["custrecord_jj_oprtns_department", "anyof", department]);
                         filters.push(
                             "AND",
@@ -259,11 +253,9 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             ]
                         );
                     } else if (department) {
-                        // log.debug("getBagsReadyToMove else if department");
                         filters.push("AND", ["custrecord_jj_oprtns_department", "anyof", department]);
                         filters.push("AND", ["custrecord_jj_oprtns_load_created", "is", "F"]);
                     } else if (bagSearchKey) {
-                        // log.debug("getBagsReadyToMove else if bagSearchKey");
                         filters.push("AND", ["custrecord_jj_oprtns_bagno.idtext", "contains", bagSearchKey]);
                         filters.push(
                             "AND",
@@ -282,7 +274,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         filters.push("AND", ["custrecord_jj_oprtns_received", "is", "F"]);
                     }
                     else {
-                        // log.debug("getBagsReadyToMove else");
                         // filters.push("AND", ["custrecord_jj_oprtns_qa_completed", "is", "T"]);
                         filters.push(
                             "AND",
@@ -341,7 +332,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     }
                     else {
                         let totalRecords = operationsSearchObj.runPaged().count;
-                        // log.debug("totalItems", totalRecords);
                         // let allResults = jjUtil.dataSets.iterateSavedSearch({
                         let paginatedResults = jjUtil.dataSets.iterateSavedSearch({
                             searchObj: operationsSearchObj,
@@ -352,26 +342,14 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                         // Calculate pagination
                         // let totalRecords = allResults.length;
-                        // log.debug("totalRecords", totalRecords);
                         // let totalPages = Math.ceil(totalRecords / PAGE_SIZE);
-                        // log.debug("totalPages", totalPages);
-                        // log.debug("currentPageIndex", pageIndex);
                         // let START_INDEX = (pageIndex - 1 || 0) * PAGE_SIZE;
                         // let END_INDEX = START_INDEX + PAGE_SIZE;
-                        // log.debug("START_INDEX", START_INDEX);
-                        // log.debug("END_INDEX", END_INDEX);
 
                         // // Slice results for the current page
                         // let paginatedResults = allResults.slice(START_INDEX, END_INDEX);
-                        log.debug("paginatedResults", paginatedResults);
 
                         // return paginatedResults;
-
-                        // log.debug("currentPageIndex", {
-                        //     "currentPageIndex": pageIndex,
-                        //     "totalPages": totalPages,
-                        //     "totalItems": totalRecords
-                        // });
 
                         return {
                             "currentPageIndex": paginatedResults?.pageInfo?.pageIndex || 0,
@@ -757,9 +735,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         "AND", ["custrecord_jj_bagcoremat_item.class", "anyof", GOLD_CLASS_IDS]
                     ];
 
-                    // if (locations) {
-                    //     filters.push("AND", ["custrecord_jj_bagcoremat_bagcore.custrecord_jj_bagcore_location", "anyof", locations]);
-                    // }
                     if (locations) {
                         const locationArr = Array.isArray(locations) ? locations : [locations];
                         if (locationArr.length > 0) {
@@ -817,7 +792,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             PAGE_INDEX: pageIndex,
                             PAGE_SIZE: pageSize || PAGE_SIZE,
                         });
-                        log.debug("paginatedResults", paginatedResults);
                         return {
                             "currentPageIndex": paginatedResults?.pageInfo?.pageIndex || 0,
                             "totalPages": paginatedResults?.pageInfo?.pageLength || 0,
@@ -850,9 +824,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         search.createColumn({ name: "custrecord_jj_oprtns_bagno", sort: search.Sort.DESC, label: "bag_no_id" })
                     ];
 
-                    // if (locations) {
-                    //     filters.push("AND", ["custrecord_jj_oprtns_bagcore.custrecord_jj_bagcore_location", "anyof", locations]);
-                    // }
                     if (locations) {
                         const locationArr = Array.isArray(locations) ? locations : [locations];
                         if (locationArr.length > 0) {
@@ -1008,8 +979,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             PAGE_SIZE: pageSize || PAGE_SIZE,
                         });
 
-                        log.debug("paginatedResults", paginatedResults);
-
                         return {
                             "currentPageIndex": paginatedResults?.pageInfo?.pageIndex || 0,
                             "totalPages": paginatedResults?.pageInfo?.pageLength || 0,
@@ -1045,9 +1014,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         search.createColumn({ name: "custrecord_jj_ring_size", join: "CUSTRECORD_JJ_BAGGEN_BAGCORE", label: "ring_size" })
                     ];
 
-                    // if (locations) {
-                    //     filters.push("AND", ["custrecord_jj_baggen_bagcore.custrecord_jj_bagcore_location", "anyof", locations]);
-                    // }
                     if (locations) {
                         const locationArr = Array.isArray(locations) ? locations : [locations];
                         if (locationArr.length > 0) {
@@ -1140,24 +1106,12 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                         // Calculate pagination
                         // let totalRecords = allResults.length;
-                        // log.debug("totalRecords", totalRecords);
                         // let totalPages = Math.ceil(totalRecords / PAGE_SIZE);
-                        // log.debug("totalPages", totalPages);
-                        // log.debug("currentPageIndex", pageIndex);
                         // let START_INDEX = (pageIndex - 1 || 0) * PAGE_SIZE;
                         // let END_INDEX = START_INDEX + PAGE_SIZE;
-                        // log.debug("START_INDEX", START_INDEX);
-                        // log.debug("END_INDEX", END_INDEX);
 
                         // // Slice results for the current page
                         // let paginatedResults = allResults.slice(START_INDEX, END_INDEX);
-                        log.debug("paginatedResults", paginatedResults);
-                        // log.debug("getActiveBags", {
-                        //         "currentPageIndex": pageIndex,
-                        //         "totalPages": totalPages,
-                        //         "bagList": paginatedResults,
-                        //         "totalItems": totalRecords
-                        //     });
 
                         // return paginatedResults;
 
@@ -1289,52 +1243,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              * @param {number} bagGenerationId - The internal ID of the bag generation.
              * @returns {Array} An array of item details.
              */
-            // getBagItemDetails(bagGenerationId) {
-            //     try {
-            //         let customrecord_jj_bagcore_materialsSearchObj = search.create({
-            //             type: "customrecord_jj_bagcore_materials",
-            //             filters: [
-            //                 ["custrecord_jj_bagcoremat_bag_name.internalid", "anyof", bagGenerationId],
-            //                 "AND", ["isinactive", "is", "F"]
-            //             ],
-            //             columns: [
-            //                 search.createColumn({ name: "internalid", label: "bagCoreMaterialId" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_item", label: "Item" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_size", label: "Size" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_qty", label: "Quantity" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_piece", label: "Weight" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_bag_name", label: "bag_no" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_uom", label: "uom" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_total_issue", label: "total_issue" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_to_issue", label: "to_issue" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_total_loss", label: "total_loss" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_total_receive", label: "total_receive" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_wo_line_no", label: "wo_line_no" }),
-            //                 search.createColumn({ name: "custrecord_jj_bagcoremat_wo", label: "work_order_id" }),
-            //                 search.createColumn({
-            //                     name: "class",
-            //                     join: "CUSTRECORD_JJ_BAGCOREMAT_ITEM",
-            //                     label: "item_class"
-            //                  }),
-
-            //             ]
-            //         });
-
-            //         // Use jjUtil.dataSets to iterate over the search results
-            //         return jjUtil.dataSets.iterateSavedSearch({
-            //             searchObj: customrecord_jj_bagcore_materialsSearchObj,
-            //             columns: jjUtil.dataSets.fetchSavedSearchColumn(customrecord_jj_bagcore_materialsSearchObj, 'label'),
-            //             PAGE_INDEX: null,
-            //             PAGE_SIZE: 1000
-            //         });
-
-            //     } catch (error) {
-            //         log.error('Error in getBagItemDetails', error);
-            //         return [];
-            //     }
-            // },
-
-            // Also used for summary
             getBagItemDetails(bagGenerationId) {
                 try {
                     let customrecord_jj_bagcore_materialsSearchObj = search.create({
@@ -1408,157 +1316,10 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             PAGE_INDEX: null,
                             PAGE_SIZE: 1000
                         });
-                    // log.debug("searchResult", searchResult);
 
                     const groupedResults = {};
 
-                    // searchResult.forEach((result) => {
-                    //     const bagCoreMaterialId = result.bagCoreMaterialId.value;
-                    //     const createdDate = result.created_date;
-                    //     const lotNumber = result["Lot Number"]
-                    //     const quantity = result["Lot Quantity"]
-                    //     const isLotInactive = result.lot_inactive;
-
-                    //     // Remove the parent item from the item text
-                    //     result.Item.text = result.Parent?.text
-                    //         ? result.Item.text.replace(result.Parent.text + " : ", "")
-                    //         : result.Item.text;
-
-                    //     // Initialize the group if it doesn't exist
-                    //     if (!groupedResults[bagCoreMaterialId]) {
-                    //         groupedResults[bagCoreMaterialId] = {
-                    //             bagCoreMaterialId: result.bagCoreMaterialId,
-                    //             Item: result.Item,
-                    //             Size: result.Size,
-                    //             Quantity: result.Quantity,
-                    //             actual_quantity: result.Quantity,
-                    //             actual_pieces: result.actual_pieces,
-                    //             weight: result.Weight,
-                    //             bag_no: result.bag_no,
-                    //             uom: result.uom,
-                    //             total_issue: result.total_issue,
-                    //             to_issue: result.to_issue,
-                    //             total_loss: result.total_loss,
-                    //             total_receive: result.total_receive,
-                    //             wo_line_no: result.wo_line_no,
-                    //             work_order_id: result.work_order_id,
-                    //             item_class: result.item_class,
-                    //             isSerialized: result.is_serial,
-                    //             issued_pieces: result.issued_pieces,
-                    //             tobe_issued_pieces: result.tobe_issued_pieces,
-                    //             received_pieces: result.received_pieces,
-                    //             loss_pieces: result.loss_pieces,
-                    //             issued_weight: result.Quantity,
-                    //             balance_qty: result.balance_qty,
-                    //             balance_pieces: result.balance_pieces,
-                    //             itemImage: result.item_image,
-                    //             actual_pieces_info: result.actual_pieces_info,
-                    //             to_be_issued_pieces_info: result.to_be_issued_pieces_info,
-                    //             balance_pieces_info: result.balance_pieces_info,
-                    //             total_issued_pieces_info: result.issued_pieces_info,
-                    //             loss_pieces_info: result.loss_pieces_info,
-                    //             received_pieces_info: result.received_pieces_info,
-                    //             stoneQualityGroup: result.stone_quality_group,
-                    //             inventoryDetail: [],
-                    //             created_dates: []  // Store created dates for sorting
-                    //         };
-                    //     }
-
-                    //     // Add the created date to the list of created_dates for this material
-                    //     groupedResults[bagCoreMaterialId].created_dates.push(createdDate);
-
-                    //     // Add lot number and quantity to the inventoryDetail array
-                    //     if (lotNumber.value && quantity.value && !isLotInactive?.value) {
-                    //         groupedResults[bagCoreMaterialId].inventoryDetail.push({
-                    //             lotNumber: lotNumber,
-                    //             quantity: quantity
-                    //         });
-                    //     }
-                    // });
-
-                    // // Now we loop through each item to calculate the number of days since the earliest created date
-                    // Object.values(groupedResults).forEach(item => {
-                    //     if (item.created_dates.length > 0) {
-                    //         // Get the minimum created date
-                    //         const minCreatedDate = new Date(Math.min(...item.created_dates.map(date => new Date(date))));
-                    //         // Get the current date
-                    //         const currentDate = new Date();
-                    //         // Calculate the difference in time (in milliseconds)
-                    //         const timeDiff = currentDate - minCreatedDate;
-                    //         // Convert the difference from milliseconds to days
-                    //         const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
-                    //         // Assign the calculated number of days
-                    //         item.days_since_creation = daysDiff;
-                    //     }
-                    // });
-
-                    // log.debug("groupedResults", Object.values(groupedResults));
-                    // // Convert grouped results to an array
-                    // return Object.values(groupedResults);
-
-                    // Utility function to parse the custom date format (27-Feb-2025 12:17 pm)
-
-                    // const parseCustomDate = (dateStr) => {
-                    //     log.debug("Input dateStr:", dateStr);
-
-                    //     // Handle if the string is empty or malformed
-                    //     if (!dateStr) {
-                    //         log.error("Empty or invalid date string provided.");
-                    //         return null; // Early exit if the input string is invalid
-                    //     }
-
-                    //     // Mapping month abbreviations to numerical values
-                    //     const months = {
-                    //         "Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5,
-                    //         "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9, "Nov": 10, "Dec": 11
-                    //     };
-
-                    //     // Split the date string into its components
-                    //     const parts = dateStr.split(/[\s-:]+/);
-
-                    //     log.debug("Date parts after splitting:", parts);
-
-                    //     if (parts.length < 6) {  // We expect 6 parts (day, month, year, hour, minute, period)
-                    //         log.error("Date string has insufficient parts to parse.");
-                    //         return null; // Ensure that the date string has enough parts
-                    //     }
-
-                    //     const [day, monthStr, year, hourStr, minuteStr, period] = parts;
-
-                    //     // Get the numerical value for the month
-                    //     const month = months[monthStr];
-                    //     if (month === undefined) {
-                    //         log.error("Invalid month string: " + monthStr);
-                    //         return null; // Exit if the month is invalid
-                    //     }
-
-                    //     // Parse the hour and minute from their respective strings
-                    //     let hour = parseInt(hourStr, 10); // Ensure it's parsed as an integer
-                    //     const minute = parseInt(minuteStr, 10); // Ensure it's parsed as an integer
-
-                    //     if (isNaN(hour) || isNaN(minute)) {
-                    //         log.error("Invalid hour or minute values.");
-                    //         return null;
-                    //     }
-
-                    //     // Handle the AM/PM logic for 12-hour clock
-                    //     if (period.toLowerCase() === "pm" && hour < 12) {
-                    //         hour += 12; // Convert PM hour to 24-hour format (except for 12 PM)
-                    //     }
-                    //     if (period.toLowerCase() === "am" && hour === 12) {
-                    //         hour = 0; // Convert 12 AM to 0 hour
-                    //     }
-
-                    //     // Now, create a JavaScript Date object
-                    //     const parsedDate = new Date(year, month, day, hour, minute);
-
-                    //     log.debug("Parsed Date:", parsedDate);
-
-                    //     return parsedDate;
-                    // };
-
                     const parseCustomDate = (dateStr) => {
-                        // log.debug("Input dateStr:", dateStr);
 
                         // Handle empty or invalid date string
                         if (!dateStr) {
@@ -1569,8 +1330,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         try {
                             // Parse the date using NetSuite's format module
                             const parsedDate = format.parse({ value: dateStr, type: format.Type.DATETIME });
-
-                            // log.debug("Parsed Date:", parsedDate);
                             return parsedDate;
                         } catch (error) {
                             log.error("Error parsing date:", error);
@@ -1580,9 +1339,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     searchResult.forEach((result) => {
                         const bagCoreMaterialId = result.bagCoreMaterialId.value;
                         const createdDateStr = result.created_date?.value;
-                        // log.debug("createdDateStr", createdDateStr);
                         const lotNumber = result["Lot Number"];
-                        // log.debug("lotNumber", lotNumber);
                         const quantity = result["Lot Quantity"];
                         const pieces = result["Lot Pieces"];
                         const isLotInactive = result.lot_inactive;
@@ -1653,7 +1410,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         if (jjUtil.checkForParameter(createdDateStr)) {
                             // Parse the created date from the string format
                             const parsedCreatedDate = parseCustomDate(createdDateStr);
-                            // log.debug("parsedCreatedDate", parsedCreatedDate);
 
                             // Add the parsed created date to the list of created_dates for this material
                             groupedResults[bagCoreMaterialId].created_dates.push(parsedCreatedDate);
@@ -1702,14 +1458,10 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             // Calculate the difference in days
                             const daysDiff = Math.floor((currentDate - minCreatedDate) / (1000 * 3600 * 24));
 
-                            // log.debug("{ minCreatedDate, currentDate, daysDiff }", { minCreatedDate, currentDate, daysDiff });
-
                             // Assign the calculated number of days
                             item.days_since_creation = daysDiff;
                         }
                     });
-
-                    // log.debug("groupedResults", Object.values(groupedResults));
 
                     // Convert grouped results to an array
                     return Object.values(groupedResults);
@@ -1796,7 +1548,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     return { qualities: [], colors: [] };
                 }
             },
-
 
             /**
             * Calculates total gold, diamond, and color stone weight for multiple bags
@@ -1900,8 +1651,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                 const weights = this.getTotalMaterialWeightsForBags(bagIds);
                 return weights.colorStoneWeight;
             },
-
-
 
             /**
              * Retrieves customer details from a saved search.
@@ -2236,24 +1985,12 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                         // // Calculate pagination
                         // let totalRecords = allResults.length;
-                        // log.debug("totalRecords", totalRecords);
                         // let totalPages = Math.ceil(totalRecords / PAGE_SIZE);
-                        // log.debug("totalPages", totalPages);
-                        // log.debug("currentPageIndex", pageIndex);
                         // let START_INDEX = (pageIndex - 1 || 0) * PAGE_SIZE;
                         // let END_INDEX = START_INDEX + PAGE_SIZE;
-                        // log.debug("START_INDEX", START_INDEX);
-                        // log.debug("END_INDEX", END_INDEX);
 
                         // Slice results for the current page
                         // let paginatedResults = allResults.slice(START_INDEX, END_INDEX);
-
-                        log.debug("paginatedResults", paginatedResults);
-                        // log.debug("getBagMovementDetails", {
-                        //     "currentPageIndex": pageIndex,
-                        //     "totalPages": totalPages,
-                        //     "totalItems": totalRecords
-                        // });
 
                         // return paginatedResults;
 
@@ -2359,7 +2096,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             ]
                     });
                     // let searchResultCount = customrecord_jj_bag_tree_loadSearchObj.runPaged().count;
-                    // log.debug("customrecord_jj_bag_tree_loadSearchObj result count", searchResultCount);
                     customrecord_jj_bag_tree_loadSearchObj.run().each(function (result) {
 
                         bagTreeLoadList.push({
@@ -2589,61 +2325,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                 }
             },
 
-            // getWaxTreeList(bagLoadId, param) {
-            //     try {
-            //         log.debug("Inside search", param);
-            //         let filters = [
-            //             ["isinactive", "is", "F"]
-            //         ]
-            //         let columns = [
-            //             search.createColumn({ name: "internalid", label: "wax_tree_id" }),
-            //             search.createColumn({ name: "name", label: "wax_tree_name" }),
-            //             search.createColumn({ name: "custrecord_jj_total_weight_needed", label: "metal_needed" }),
-            //             // search.createColumn({ name: "custrecord_jj_total_quantity", label: "Total Quantity" }),
-            //             search.createColumn({ name: "custrecord_jj_metal_issue", label: "metal_issue" }),
-            //             search.createColumn({ name: "custrecord_jj_metal_issue_weight", label: "metal_issue_weight" }),
-            //             search.createColumn({ name: "custrecord_jj_metal_issue_units", label: "metal_issue_unit" }),
-            //             search.createColumn({ name: "name", join: "CUSTRECORD_JJ_BAGS", label: "bag_no_name" }),
-            //             search.createColumn({ name: "internalid", join: "CUSTRECORD_JJ_BAGS", label: "bag_no_id" }),
-            //             search.createColumn({ name: "custrecord_jj_no_of_bags", label: "no_of_bags" }),
-            //             search.createColumn({ name: "custrecord_jj_wax_weight", label: "wax_weight" })
-            //         ]
-            //         if (param == 'casting_tree') {
-            //             log.debug("Inside metalissue check");
-            //             filters.push("AND", ["custrecord_jj_metal_issue", "is", "T"]);
-            //             columns.push(search.createColumn({ name: "custrecord_jj_metal_list", label: "metal" }));
-            //             columns.push(search.createColumn({ name: "custrecord_jj_load_list", label: "load_id" }));
-            //             columns.push(search.createColumn({ name: "custrecord_jj_date", label: "date" }));
-            //             columns.push(search.createColumn({ name: "custrecord_jj_baggen_bagcore", join: "CUSTRECORD_JJ_BAGS", label: "Bag Core Tracking" }));
-            //             columns.push(search.createColumn({ name: "custrecord_jj_used_lot", label: "used_lot" }));
-            //         } else if (!param || param == "undefined") {
-            //             log.debug("Inside bagload");
-
-            //             if (!bagLoadId) {
-            //                 return []
-            //             }
-            //             filters.push("AND", ["custrecord_jj_load_list", "anyof", bagLoadId]);
-            //         }
-            //         let customrecord_wax_treeSearchObj = search.create({
-            //             type: "customrecord_jj_wax_tree",
-            //             filters: filters,
-            //             columns: columns
-            //         });
-            //         let castingTree = jjUtil.dataSets.iterateSavedSearch({
-            //             searchObj: customrecord_wax_treeSearchObj,
-            //             columns: jjUtil.dataSets.fetchSavedSearchColumn(customrecord_wax_treeSearchObj, 'label'),
-            //             PAGE_INDEX: null, // If jjUtil handles pagination, this can be set to null
-            //             PAGE_SIZE: 1000 // Adjust page size if needed
-            //         });
-            //         log.debug("castingTree", castingTree);
-            //         return castingTree;
-
-            //     } catch (e) {
-            //         log.error('error @ getWaxTreeList', e.message);
-            //         return []
-            //     }
-            // },
-
             getWaxTreeList(bagLoadId, param, locations) {
                 try {
                     // log.debug("Start: getWaxTreeList", { bagLoadId, param });
@@ -2769,37 +2450,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             );
                     }
 
-                    // if (param == 'casting_tree') {
-                    //     log.debug("Inside metalissue check");
-                    //     filters.push(
-                    //         "AND", ["custrecord_jj_metal_issue", "is", "T"],
-                    //         "AND", ["custrecord_jj_moved_to_next_dept", "is", "F"],
-                    //     );
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_metal_list", label: "metal" }));
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_load_list", label: "load_id" }));
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_date", label: "date" }));
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_baggen_bagcore", join: "CUSTRECORD_JJ_BAGS", label: "bag_core_tracking" }));
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_used_lot", label: "used_lot" }));
-                    // } else if (param == 'tree_cutting') {
-                    //     filters.push(
-                    //         "AND", ["custrecord_jj_metal_issue", "is", "T"],
-                    //         "AND", ["custrecord_jj_moved_to_next_dept", "is", "T"],
-                    //         "AND", ["custrecord_jj_moved_to_bagging", "is", "F"]
-                    //     );
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_metal_list", label: "metal" }));
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_load_list", label: "load_id" }));
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_date", label: "date" }));
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_baggen_bagcore", join: "CUSTRECORD_JJ_BAGS", label: "bag_core_tracking" }));
-                    //     columns.push(search.createColumn({ name: "custrecord_jj_used_lot", label: "used_lot" }));
-                    // } else if (!param || param == "undefined") {
-                    //     log.debug("Inside bagload");
-
-                    //     if (!bagLoadId) {
-                    //         return []
-                    //     }
-                    //     filters.push("AND", ["custrecord_jj_load_list", "anyof", bagLoadId]);
-                    // }
-
                     // Create search and fetch results
                     let waxTreeSearchObj = search.create({
                         type: "customrecord_jj_wax_tree",
@@ -2901,33 +2551,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     if (!bagsArray || bagsArray.length <= 0 || !metalId || !locations) {
                         return [];
                     }
-
-                    // let bagGenerationSearchObj = search.create({
-                    //     type: "customrecord_jj_bag_generation",
-                    //     filters: [
-                    //         ["isinactive", "is", "F"],
-                    //         "AND", ["custrecord_jj_baggen_merge", "is", "F"],
-                    //         "AND", ["custrecord_jj_baggen_split", "is", "F"],
-                    //         "AND", ["custrecord_jj_is_rejected", "is", "F"],
-                    //         "AND", ["custrecord_jj_baggen_dept.isinactive", "is", "F"],
-                    //         "AND", ["internalid", "anyof", bagsArray],
-                    //         "AND", ["custrecord_jj_bagcoremat_bag_name.custrecord_jj_bagcoremat_item", "anyof", metalId],
-                    //     ],
-                    //     columns: [
-                    //         search.createColumn({ name: "name", label: "ID" }),
-                    //         search.createColumn({ name: "internalid", label: "Internal Id" }),
-                    //         search.createColumn({ name: "custrecord_jj_bagcore_design", join: "CUSTRECORD_JJ_BAGGEN_BAGCORE", label: "Style" }),
-                    //         search.createColumn({ name: "custrecord_jj_bagcoremat_piece", join: "CUSTRECORD_JJ_BAGCOREMAT_BAG_NAME", label: "weight" }),
-                    //         search.createColumn({ name: "custrecord_jj_baggen_qty", label: "Quantity Per Bag" }),
-                    //         search.createColumn({ name: "custrecord_jj_baggen_dept", label: "Department " }),
-                    //         search.createColumn({ name: "custrecord_jj_mandept_hod", join: "CUSTRECORD_JJ_BAGGEN_DEPT", label: "hod" }),
-                    //         search.createColumn({ name: "custrecord_jj_baggen_bagcore", label: "Bag Core Tracking" }),
-                    //         search.createColumn({ name: "custrecord_jj_bagcoremat_qty", join: "CUSTRECORD_JJ_BAGCOREMAT_BAG_NAME", label: "Quantity" }),
-                    //         search.createColumn({ name: "custrecord_jj_bagcore_customer", join: "CUSTRECORD_JJ_BAGGEN_BAGCORE", label: "Customer" }),
-                    //         search.createColumn({ name: "custrecord_jj_bagcore_item_category", join: "CUSTRECORD_JJ_BAGGEN_BAGCORE", label: "category" }),
-                    //         search.createColumn({ name: "custrecord_jj_bagcore_customer_name", join: "CUSTRECORD_JJ_BAGGEN_BAGCORE", label: "Customer Name" }),
-                    //     ]
-                    // });
 
                     const bagGenerationSearchObj = search.create({
                         type: "customrecord_jj_bagcore_materials",
@@ -3060,7 +2683,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             ]
                     });
                     let searchResultCount = customrecord_jj_direct_issue_returnSearchObj.runPaged().count;
-                    log.debug("customrecord_jj_direct_issue_returnSearchObj result count", searchResultCount);
                     if (searchResultCount < 0) {
                         return []
                     }
@@ -3140,86 +2762,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     return [];
                 }
             },
-            // getDirectIssueComponents(bagId) {
-            //     try {
-            //         let bagCoreMaterialsSearchObj = search.create({
-            //             type: "customrecord_jj_bagcore_materials",
-            //             filters:
-            //                 [
-            //                     ["custrecord_jj_bagcoremat_bag_name", "anyof", bagId]
-            //                 ],
-            //             columns:
-            //                 [
-            //                     search.createColumn({ name: "custrecord_jj_bagcoremat_item", label: "Item" }),
-            //                     search.createColumn({ name: "custrecord_jj_bagcoremat_qty", label: "Quantity" }),
-            //                     search.createColumn({ name: "custrecord_jj_bagcoremat_wo", label: "Work Order" }),
-            //                     search.createColumn({ name: "custrecord_jj_bagcoremat_wo_line_no", label: "Work Order Line Number" }),
-            //                     search.createColumn({ name: "custrecord_jj_bagcoremat_to_issue", label: "To Be Issued" })
-            //                 ]
-            //         });
-            //         let componentsArray = []; // Initialize an array to store the results.
-
-            //         bagCoreMaterialsSearchObj.run().each(result => {
-            //             const bagCoreMaterialId = result.id;
-            //             const itemId = result.getValue({ name: "custrecord_jj_bagcoremat_item" }); // Get the Item ID
-            //             const itemName = result.getText({ name: "custrecord_jj_bagcoremat_item" }); // Get the Item Name
-            //             const quantity = result.getValue({ name: "custrecord_jj_bagcoremat_qty" }); // Get the Quantity
-            //             const workorder = result.getValue({ name: "custrecord_jj_bagcoremat_wo" }); // Get the Workorder
-            //             const woLineNo = result.getValue({ name: "custrecord_jj_bagcoremat_wo_line_no" }); // Get the Workorder Line Number
-            //             const toBeIssued = result.getValue({ name: "custrecord_jj_bagcoremat_to_issue" });
-
-            //             componentsArray.push({
-            //                 itemId: itemId,
-            //                 itemName: itemName,
-            //                 quantity: parseFloat(quantity), // Convert to number if necessary
-            //                 workorder: workorder,
-            //                 woLineNo: woLineNo,
-            //                 bagCoreMaterialId: bagCoreMaterialId,
-            //                 toBeIssued: toBeIssued
-
-            //             });
-
-            //             return true; // Return true to continue iteration
-            //         });
-            //         return { status: 'SUCCESS', reason: 'Direct Issue Componenets Listed', data: componentsArray };
-            //     } catch (e) {
-            //         log.error('error @ getDirectIssueComponents', e.message);
-            //         return {}
-            //     }
-            // },
             getDirectIssueComponents(bagId, operationId) {
                 try {
-                    log.debug("Start: getDirectIssueComponents", { bagId, operationId });
-
-                    // let directIssueReturnQuery = `
-                    //             SELECT 
-                    //                 BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_BAGCORE_MATERIALS.ID) AS bagCoreMaterialId, 
-                    //                 BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN.ID) AS directIssueReturnId, 
-                    //                 CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_item AS itemId,
-                    //                 BUILTIN_RESULT.TYPE_STRING(BUILTIN.DF(CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_item)) AS itemName, 
-                    //                 BUILTIN_RESULT.TYPE_STRING(item.itemtype) AS itemType,
-                    //                 BUILTIN_RESULT.TYPE_STRING(item.islotitem) AS isLotItem,
-                    //                 BUILTIN_RESULT.TYPE_STRING(item.isserialitem) AS isSerialItem,
-                    //                 BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_qty) AS quantity, 
-                    //                 CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_wo AS workorder, 
-                    //                 BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_wo_line_no) AS woLineNo,
-                    //                 BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_to_issue) AS toBeIssued,
-                    //                 BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_total_issue) AS totalIssue,
-                    //                 BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_total_receive) AS totalReceive,
-                    //                 BUILTIN_RESULT.TYPE_FLOAT(CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_total_loss) AS totalLoss
-                    //             FROM 
-                    //                 CUSTOMRECORD_JJ_BAGCORE_MATERIALS
-                    //             LEFT JOIN 
-                    //                 CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN 
-                    //                 ON CUSTOMRECORD_JJ_BAGCORE_MATERIALS.ID = CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN.custrecord_jj_bag_core_material_record
-                    //             LEFT JOIN 
-                    //                 item -- Join the item table
-                    //                 ON CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_item = item.ID
-                    //             WHERE 
-                    //                 (CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN.custrecord_jj_operations = ? OR CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN.ID IS NULL)
-                    //                 AND CUSTOMRECORD_JJ_BAGCORE_MATERIALS.custrecord_jj_bagcoremat_bag_name = ?;
-
-                    //              `;
                     let directIssueReturnQuery = `
                         SELECT 
                             BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_BAGCORE_MATERIALS.ID) AS bagCoreMaterialId, 
@@ -3290,7 +2834,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     let componentsArray = [];
                     let results = queryResults.asMappedResults();
                     // Get results as an array of objects
-                    log.debug("results", results);
                     results.forEach(result => {
                         // if (result.itemclass == SERIAL_LOT_ITEM_CLASS) {
                         //     componentsArray.push({
@@ -3480,217 +3023,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     return { status: 'ERROR', reason: 'Failed to Refresh Item Cache: ' + e.message, data: [] };
                 }
             },
-            // syncItemCache() {
-            //     try {
-            //         // Clear the cache by removing the existing key
-            //         let itemCache = cache.getCache({ name: CACHE_NAME });
-            //         itemCache.remove({ key: CACHE_KEY });
-
-            //         // Use a loader function to fetch data if the cache is accessed
-            //         function fetchItemCacheFromFile() {
-            //             const fileObj = file.load({ id: CACHE_FILE_ID });
-            //             return JSON.parse(fileObj.getContents());
-            //         }
-
-            //         // Access the cache to ensure it is populated using the loader
-            //         let cacheData = itemCache.get({
-            //             key: CACHE_KEY,
-            //             loader: function () {
-            //                 let fileContents = fetchItemCacheFromFile();
-
-            //                 // Save the data to the cache
-            //                 itemCache.put({
-            //                     key: CACHE_KEY,
-            //                     value: fileContents
-            //                 });
-
-            //                 return fileContents;
-            //             }
-            //         });
-            //       log.debug("cacheData", cacheData);
-
-            //         return { status: 'SUCCESS', reason: 'Sync Item Cache has started', data: [] };
-            //     } catch (e) {
-            //         log.error('error @ syncItemCache', e.message);
-            //         return { status: 'ERROR', reason: 'Failed to Sync Item Cache: ' + e.message, data: [] };
-            //     }
-            // },
-            // listInventoryDetails(componentId, departmentId, param) {
-            //     try {
-            //         log.debug("Start: listInventoryDetails", { componentId, departmentId, param });
-            //         let deptFields = searchResults.getDepartmentFields(departmentId);
-            //         // log.debug("deptFields", deptFields);
-            //         let locationId = deptFields?.location;
-            //         let binNumber = deptFields?.bin;
-            //         let binName = deptFields?.binName;
-            //         let goodStatus = deptFields?.goodStatus;
-            //         //  let wipStatus = deptFields?.wipStatus;
-            //         let waxTreeStatus = deptFields?.waxTreeStatus;
-
-            //         // let inventorybalanceSearch = search.create({
-            //         //     type: "inventorybalance",
-            //         //     filters:
-            //         //         [
-            //         //             ["item.type", "anyof", "Assembly", "InvtPart"],
-            //         //             "AND",
-            //         //             ["item", "anyof", componentId],
-            //         //             "AND",
-            //         //             ["binnumber", "anyof", binNumber],
-            //         //             "AND",
-            //         //             ["location", "anyof", locationId],
-            //         //             "AND",
-            //         //             ["status", "anyof", goodStatus],
-            //         //             "AND",
-            //         //             ["formulanumeric:      Case                  when {item.type} IN ('Inventory Item',' Assembly') AND {item.islotitem}='F' AND {item.isserialitem}='F' THEN {available}              when {item.type} IN ('Inventory Item',' Assembly') AND {item.islotitem}='T' THEN {available}              when {item.type} IN ('Inventory Item',' Assembly') AND {item.isserialitem}='T' AND {invnumcommitted} IS NULL THEN 1       when {item.type} IN ('Inventory Item',' Assembly') AND {item.isserialitem}='T' AND {invnumcommitted} = 0 THEN 1             when {item.type} IN ('Inventory Item',' Assembly') AND {item.isserialitem}='T' AND {invnumcommitted} = 1 THEN 0              ELSE {available} END", "notequalto", "0"],
-            //         //             "AND",
-            //         //             ["available", "greaterthan", "0"]
-            //         //         ],
-            //         //     columns:
-            //         //         [
-            //         //             search.createColumn({ name: "item", label: "item" }),
-            //         //             search.createColumn({ name: "binnumber", label: "bin_number" }),
-            //         //             search.createColumn({ name: "inventorynumber", label: "inventory_number" }),
-            //         //             search.createColumn({ name: "status", label: "status" }),
-            //         //             search.createColumn({ name: "location", label: "location" }),
-            //         //             search.createColumn({ name: "available", label: "test_available" }),
-            //         //             search.createColumn({ name: "onhand", label: "onhand" }),
-            //         //             search.createColumn({ name: "invnumcommitted", label: "committed_quantity" }),
-            //         //             search.createColumn({
-            //         //                 name: "type",
-            //         //                 join: "item",
-            //         //                 label: "type"
-            //         //             }),
-            //         //             search.createColumn({
-            //         //                 name: "formulanumeric",
-            //         //                 formula: "  Case         when {item.type} IN ('Inventory Item',' Assembly') AND {item.islotitem}='F' AND {item.isserialitem}='F' THEN {available}        when {item.type} IN ('Inventory Item',' Assembly') AND {item.islotitem}='T' THEN {available}        when {item.type} IN ('Inventory Item',' Assembly') AND {item.isserialitem}='T' AND {invnumcommitted} IS NULL THEN 1    when {item.type} IN ('Inventory Item',' Assembly') AND {item.isserialitem}='T' AND {invnumcommitted} = 0 THEN 1       when {item.type} IN ('Inventory Item',' Assembly') AND {item.isserialitem}='T' AND {invnumcommitted} = 1 THEN 0        ELSE {available} END",
-            //         //                 label: "available"
-            //         //             })
-            //         //         ]
-            //         // });
-
-            //         // // Use jjUtil.dataSets to iterate over the search results
-            //         // return jjUtil.dataSets.iterateSavedSearch({
-            //         //     searchObj: inventorybalanceSearch,
-            //         //     columns: jjUtil.dataSets.fetchSavedSearchColumn(inventorybalanceSearch, 'label'),
-            //         //     PAGE_INDEX: null,
-            //         //     PAGE_SIZE: 1000
-            //         // });
-
-            //         let filters = [
-            //             ["item.type", "anyof", "Assembly", "InvtPart"],
-            //             "AND",
-            //             ["location", "anyof", locationId],
-            //             // "AND",
-            //             // ["status", "anyof", goodStatus, waxTreeStatus],
-            //             "AND",
-            //             ["formulanumeric: Case when {item.type} IN ('Inventory Item',' Assembly') AND {item.islotitem}='F' AND {item.isserialitem}='F' THEN {available}              when {item.type} IN ('Inventory Item',' Assembly') AND {item.islotitem}='T' THEN {available}              when {item.type} IN ('Inventory Item',' Assembly') AND {item.isserialitem}='T' AND {invnumcommitted} IS NULL THEN 1       when {item.type} IN ('Inventory Item',' Assembly') AND {item.isserialitem}='T' AND {invnumcommitted} = 0 THEN 1             when {item.type} IN ('Inventory Item',' Assembly') AND {item.isserialitem}='T' AND {invnumcommitted} = 1 THEN 0              ELSE {available} END", "notequalto", "0"],
-            //             "AND",
-            //             ["available", "greaterthan", "0"],
-            //             "AND",
-            //             ["item", "anyof", componentId]
-            //         ];
-
-            //         if (param && param == "bulk") {
-            //             filters.push("AND", ["status", "anyof", waxTreeStatus]);
-            //         } else if (param && param == "issue_wax_tree") {
-            //             filters.push("AND", ["status", "anyof", goodStatus]);
-            //         } else {
-            //             filters.push("AND", ["status", "anyof", goodStatus, waxTreeStatus]);
-            //         }
-
-            //         let inventorybalanceSearch = search.create({
-            //             type: "inventorybalance",
-            //             filters: filters,
-            //             columns:
-            //                 [
-            //                     search.createColumn({
-            //                         name: "item",
-            //                         summary: "GROUP",
-            //                         label: "item"
-            //                     }),
-            //                     search.createColumn({
-            //                         name: "inventorynumber",
-            //                         summary: "GROUP",
-            //                         label: "inventory_number"
-            //                     }),
-            //                     search.createColumn({
-            //                         name: "formulatext",
-            //                         summary: "MAX",
-            //                         formula: `MAX(case when {binnumber.internalid}=${binNumber} then{binnumber.internalid} end)`,
-            //                         label: "bin_number"
-            //                     }),
-            //                     search.createColumn({
-            //                         name: "formulanumeric",
-            //                         summary: "MAX",
-            //                         formula: `MAX(case when {binnumber.internalid}=${binNumber} then{available} else 0 end)`,
-            //                         label: "available"
-            //                     }),
-            //                     search.createColumn({
-            //                         name: "formulanumeric",
-            //                         summary: "MAX",
-            //                         formula: "SUM( {available} )",
-            //                         label: "totalavailable"
-            //                     }),
-            //                     search.createColumn({
-            //                         name: "formulanumeric",
-            //                         summary: "MAX",
-            //                         formula: "MAX({invnumcommitted})",
-            //                         label: "totalcommitted"
-            //                     }),
-            //                     search.createColumn({
-            //                         name: "formulanumeric",
-            //                         summary: "MAX",
-            //                         formula: "SUM(NVL({available}, 0)) - MAX(NVL({invnumcommitted}, 0))",
-            //                         label: "calculatedavailable"
-            //                     }),
-            //                     search.createColumn({
-            //                         name: "status",
-            //                         summary: "GROUP",
-            //                         label: "status"
-            //                     })
-            //                 ]
-            //         });
-
-            //         let searchresult = jjUtil.dataSets.iterateSavedSearch({
-            //             searchObj: inventorybalanceSearch,
-            //             columns: jjUtil.dataSets.fetchSavedSearchColumn(inventorybalanceSearch, 'label'),
-            //             PAGE_INDEX: null,
-            //             PAGE_SIZE: 1000
-            //         });
-            //         log.debug("searchresult", searchresult);
-
-            //         searchresult = searchresult.filter(result => {
-
-            //             log.debug("result", result);
-            //             if (param && param == "issue_wax_tree") {
-            //                 log.debug("waxTreeStatus totalavailable", { waxTreeStatus, available: parseFloat(result.available?.value || 0) });
-            //                 result["available"]["value"] = parseFloat(result.available?.value || 0);
-            //                 return true;
-            //             }
-            //             else if ((!param || (param && param == "bulk")) && waxTreeStatus == result.status?.value && parseFloat(result.available.value) > 0) {
-            //                 log.debug("waxTreeStatus totalavailable", { waxTreeStatus, available: parseFloat(result.available?.value || 0) });
-            //                 result["available"]["value"] = parseFloat(result.available?.value || 0);
-            //                 return true;
-            //             } else if (parseFloat(result.available.value) > 0 && parseFloat(result.calculatedavailable.value) > 0) {
-            //                 // Update the available value to the minimum of the two
-            //                 result.available.value = Math.min(result.available.value, result.calculatedavailable.value);
-            //                 return true; // Keep this result
-            //             }
-
-
-            //             return false;
-
-            //         });
-            //         log.debug("Final Search resultt", searchresult);
-            //         return searchresult;
-
-
-            //     }
-            //     catch (e) {
-            //         log.error('error @ listInventoryDetails', e.message);
-            //         return { status: 'ERROR', reason: 'Failed to List Inventory Details: ' + e.message, data: [] };
-            //     }
-            // },
 
             listInventoryDetails(componentId, departmentId, param) {
                 try {
@@ -3776,10 +3108,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         PAGE_INDEX: null,
                         PAGE_SIZE: 1000
                     });
-                    log.debug("searchresult", searchresult);
 
                     // searchresult = searchresult.filter(result => {
-                    //     // log.debug("result", result);
                     //     if (result.bin_number?.value) {
                     //         if (param && param == "issue_wax_tree") {
                     //             if (parseFloat(result.wax_tree_available?.value) > 0) {
@@ -4174,47 +3504,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         OrderTypeName: r.order_type?.text || '',
                         salesOrderDate: r.sales_order_date?.value || ''
                     }));
-
-                    // operationsRecordSearch.run().each(result => {
-                    //     let bagNoId = result.getValue({ name: "custrecord_jj_oprtns_bagno" });
-                    //     let bagNoName = result.getText({ name: "custrecord_jj_oprtns_bagno" });
-                    //     let bagCoreTrackingId = result.getValue({ name: "custrecord_jj_oprtns_bagcore" });
-                    //     let customerId = result.getValue({ name: "custrecord_jj_bagcore_customer", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Customer" });
-                    //     let customerName = result.getText({ name: "custrecord_jj_bagcore_customer", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Customer" });
-                    //     let workOrderId = result.getValue({ name: "custrecord_jj_bagcore_wo", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Work Order" });
-                    //     let workOrderName = result.getText({ name: "custrecord_jj_bagcore_wo", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Work Order" });
-                    //     let orderedQuantity = result.getValue({ name: "custrecord_jj_baggen_qty", join: "CUSTRECORD_JJ_OPRTNS_BAGNO", label: "Quantity Per Bag" });
-                    //     let design = result.getValue({ name: "custrecord_jj_bagcore_design", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Design" });
-                    //     let deliveryDate = result.getValue({ name: "custrecord_jj_bagcore_duedate", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Delivery Date" });
-                    //     let salesOrderId = result.getValue({ name: "custrecord_jj_bagcore_so", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Sales Order" });
-                    //     let salesOrderName = result.getText({ name: "custrecord_jj_bagcore_so", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Sales Order" });
-                    //     let status = result.getValue({ name: "status", join: "CUSTRECORD_JJ_OPRTNS_WO", label: "Status" });
-
-                    //     let orderTypeId = result.getValue({ name: "custrecord_jj_bagcore_order_type", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Order Type" });
-
-                    //     let OrderTypeName = result.getText({ name: "custrecord_jj_bagcore_order_type", join: "CUSTRECORD_JJ_OPRTNS_BAGCORE", label: "Order Type" });
-                    //     let salesOrderDate = result.getValue({ name: "custbody_jj_so_date", join: "CUSTRECORD_JJ_OPRTNS_WO", label: "SO Date" });
-
-                    //     bagDetailsArray.push({
-                    //         bagNoId: bagNoId,
-                    //         bagNoName: bagNoName,
-                    //         bagCoreTrackingId: bagCoreTrackingId,
-                    //         customerId: customerId,
-                    //         customerName: customerName,
-                    //         workOrderId: workOrderId,
-                    //         workOrderName: workOrderName,
-                    //         orderedQuantity: orderedQuantity,
-                    //         design: design,
-                    //         deliveryDate: deliveryDate,
-                    //         salesOrderId: salesOrderId,
-                    //         salesOrderName: salesOrderName,
-                    //         status: status,
-                    //         orderTypeId: orderTypeId,
-                    //         OrderTypeName: OrderTypeName,
-                    //         salesOrderDate: salesOrderDate,
-                    //     });
-                    //     return true; // Return true to continue iteration
-                    // });
                     return { status: 'SUCCESS', reason: 'Bag Details Listed', data: bagDetailsArray };
 
                 } catch (e) {
@@ -4485,62 +3774,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                 }
             },
 
-            // getBagCoreMaterialsDetail(bagNo) {
-            //     try {
-            //         let bagCoreMaterialsSearch = search.create({
-            //             type: "customrecord_jj_bagcore_materials",
-            //             filters:
-            //                 [
-            //                     ["custrecord_jj_bagcoremat_bag_name", "anyof", bagNo],
-            //                     "AND",
-            //                     ["isinactive", "is", "F"],
-            //                     "AND",
-            //                     ["custrecord_jj_bag_core_material.custrecord_jj_quantity", "greaterthan", "0"],
-            //                     "AND",
-            //                     ["custrecord_jj_bag_core_material.custrecord_jj_lot_number", "noneof", "@NONE@"]
-
-            //                 ],
-            //             columns:
-            //                 [
-            //                     search.createColumn({ name: "custrecord_jj_bagcoremat_item", label: "Item" }),
-            //                     search.createColumn({
-            //                         name: "custrecord_jj_lot_number",
-            //                         join: "CUSTRECORD_JJ_BAG_CORE_MATERIAL",
-            //                         label: "Lot Number"
-            //                     }),
-            //                     search.createColumn({
-            //                         name: "custrecord_jj_quantity",
-            //                         join: "CUSTRECORD_JJ_BAG_CORE_MATERIAL",
-            //                         label: "Quantity"
-            //                     })
-            //                 ]
-            //         });
-            //         let lotDetails = [];
-            //         bagCoreMaterialsSearch.run().each(function (result) {
-            //             lotDetails.push({
-            //                 itemId: result.getValue({ name: "custrecord_jj_bagcoremat_item" }),
-            //                 itemName: result.getText({ name: "custrecord_jj_bagcoremat_item" }),
-            //                 lotNumber: result.getValue({ name: "custrecord_jj_lot_number", join: "CUSTRECORD_JJ_BAG_CORE_MATERIAL" }),
-            //                 lotNumberName: result.getText({ name: "custrecord_jj_lot_number", join: "CUSTRECORD_JJ_BAG_CORE_MATERIAL" }),
-            //                 quantity: result.getValue({ name: "custrecord_jj_quantity", join: "CUSTRECORD_JJ_BAG_CORE_MATERIAL" })
-            //             });
-            //             return true;
-            //         });
-
-            //         return lotDetails;
-
-            //     } catch (e) {
-            //         log.error('Error getBagCoreMaterialsDetail', e.message);
-            //         return { status: 'ERROR', reason: e.message, data: [] };
-            //     }
-            // },
-
             getWorkOrderInventoryDetails(workorder, lineNumber, totalIssue) {
                 try {
-                    // log.debug("workorder 1", workorder);
-                    // log.debug("workorder 2", typeof workorder);
-                    // log.debug("lineNumber 1", lineNumber);
-                    // log.debug("totalIssue 1", totalIssue);
                     let workorderSearchObj = search.create({
                         type: "workorder",
                         settings: [{ "name": "consolidationtype", "value": "ACCTTYPE" }],
@@ -4645,11 +3880,9 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     ];
 
                     if (bagCoreMaterialId != null) {
-                        log.debug("Filtered added bagCoreMaterialId", bagCoreMaterialId);
                         filter.push("AND", ["internalid", "anyof", bagCoreMaterialId]);
                     }
                     else if (bagId) {
-                        log.debug("Filter added: bagId");
                         filter.push("AND", ["custrecord_jj_bagcoremat_bag_name", "anyof", bagId],
                             // "AND", ["custrecord_jj_bag_core_material.custrecord_jj_quantity", "greaterthan", "0"], 
                             // "AND", ["custrecord_jj_bag_core_material.custrecord_jj_lot_number", "noneof", "@NONE@"]
@@ -4788,7 +4021,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                     // Convert grouped results to an array
                     aggregatedResult = Object.values(groupedResults);
-                    // log.debug("aggregatedResult", aggregatedResult);
 
                     // const grouped = {};
                     // aggregatedResult.forEach((item) => {
@@ -4829,7 +4061,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     //         quantity: quantity.toFixed(5) // Keep five decimal places for consistency
                     //     }))
                     // }));
-                    // log.debug("final", final);
                     // return final;
 
                     return aggregatedResult;
@@ -5095,8 +4326,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         return true; // Continue iteration
                     });
 
-                    log.debug("Bag Core Materials Search Results", items);
-
                     return { status: "SUCCESS", data: items };
                 } catch (error) {
                     log.error("Error in getBagCoreMaterialItemsForRecreation", error);
@@ -5126,7 +4355,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         imageURL = result.getText({ name: "custrecord_jj_bagcore_style", join: "CUSTRECORD_JJ_BAGGEN_BAGCORE" });
                         return true;
                     });
-                    log.debug("imageURL", imageURL);
                     return { status: 'SUCCESS', reason: 'Image Found', data: imageURL };
                 } catch (error) {
                     log.error('error @ fetchItemImage', error.message);
@@ -5171,7 +4399,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         PAGE_INDEX: null,
                         PAGE_SIZE: 1000
                     });
-                    log.debug("inventorySearchResult", inventoryNumberSearchResult);
                     let componentInventoryDetails = {};
                     let finalResult = [];
 
@@ -5254,7 +4481,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         finalResult.push(componentInventoryDetails);
                     }
 
-                    log.debug("componentInventoryDetails", componentInventoryDetails);
                     return finalResult;
                 } catch (e) {
                     log.error('error @ listComponentsForSerial', e.message);
@@ -5405,7 +4631,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
             // For Bag Summmary
             getSpecificMaterialDetails(materialType, departmentId, bagSearchKey) {
                 try {
-                    log.debug("getSpecificMaterialDetails", { materialType, departmentId });
                     let materialTypeId = "";
                     if (materialType == 'gold_type') {
                         materialTypeId = MATERIAL_TYPE_ID_GOLD;
@@ -5419,7 +4644,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                     bagSearchKey = bagSearchKey?.replace(/'/g, "''").replace(/[%_]/g, ch => '\\' + ch) || '';
                     let sqlQuery = this.getSpecificMaterialDetailsQuery(materialTypeId, departmentId, bagSearchKey);
-                    log.debug("sqlQuery", sqlQuery);
 
                     // Run the query as a paged query
                     let results = query.runSuiteQLPaged({ query: sqlQuery, pageSize: 1000 });
@@ -5494,7 +4718,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                     // Convert grouped data to an array
                     let groupedArray = Object.values(groupedData);
-                    log.debug('Grouped Data', groupedArray);
 
                     return { status: "SUCCESS", reason: 'Result Found', data: groupedArray };
                 } catch (error) {
@@ -5519,7 +4742,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              */
             getItemInventoryDetails(materialType, binNumber, locationId, statusId) {
                 try {
-                    log.debug("getItemInventoryDetails", { materialType, binNumber, locationId });
                     let materialTypeId = "";
                     if (materialType == 'gold_type') {
                         materialTypeId = MATERIAL_TYPE_ID_GOLD;
@@ -5597,8 +4819,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         )
                     `;
 
-                    // log.debug("sqlQuery", sqlQuery);
-
                     // Run the query as a paged query
                     let results = query.runSuiteQLPaged({ query: sqlQuery, pageSize: 1000 });
                     // Retrieve the query results using an iterator
@@ -5621,8 +4841,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         [departmentDetails.diamondBurntStatus]: "burnedQty",
                         [departmentDetails.lossOutsourcedStatus]: "lossOutsourcedQty",
                     };
-
-                    log.debug("statusMapping", statusMapping);
 
                     // // Status mapping for the required fields
                     // const statusMapping = {
@@ -5652,7 +4870,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             let inventoryStatus = parseInt(rowData[5], 10);
                             let createdDate = rowData[6];
                             let purity = parseFloat(rowData[8] || 0) / 100;
-                            // log.debug("itemName, purity, rowData[8]", { purity, itemName, rowData: rowData[8] });
 
                             // Initialize the grouped item if not already done
                             if (!groupedData[itemId]) {
@@ -5688,8 +4905,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                             // Sum quantities based on inventoryStatus
                             let statusField = statusMapping[inventoryStatus];
-
-                            // log.debug("createdDate", createdDate);
 
                             if (statusField) {
                                 // Add inventory details
@@ -5773,9 +4988,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     // Append total row at the end of groupedArray
                     groupedArray.push(totalRow);
 
-                    // Log the result
-                    log.debug('Grouped Data', JSON.stringify(groupedArray, null, 2));
-
                     return { status: "SUCCESS", reason: 'Result Found', data: groupedArray };
                 } catch (error) {
                     log.error('error @ getItemInventoryDetails', error.message);
@@ -5799,7 +5011,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              */
             getItemInventoryPiecesDetails(materialType, binNumber, locationId, statusId) {
                 try {
-                    log.debug("getItemInventoryPiecesDetails", { materialType, binNumber, locationId });
                     let materialTypeId = "";
                     if (materialType == 'gold_type') {
                         materialTypeId = MATERIAL_TYPE_ID_GOLD;
@@ -5886,7 +5097,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         [departmentDetails.diamondBurntStatus]: "burnedPieces",
                         [departmentDetails.lossOutsourcedStatus]: "lossOutsourcedPieces",
                     };
-                    log.debug("statusMapping", statusMapping);
 
                     resultIterator.each(function (page) {
                         let pageIterator = page.value.data.iterator();
@@ -5935,8 +5145,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
                             // Sum quantities based on inventoryStatus
                             let statusField = statusMapping[inventoryStatus];
-
-                            // log.debug("piecesCreatedDate", piecesCreatedDate);
 
                             if (statusField) {
                                 // Initialize the grouping if it doesn't exist
@@ -6024,9 +5232,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     // Append total row at the end of groupedArray
                     groupedArray.push(totalRow);
 
-                    // Log the result
-                    log.debug('Grouped Data', JSON.stringify(groupedArray, null, 2));
-
                     return { status: "SUCCESS", reason: 'Result Found', data: groupedArray };
                 } catch (error) {
                     log.error('error @ getItemInventoryPiecesDetails', error.message);
@@ -6036,8 +5241,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
 
             getBagGenReport(workOrder) {
                 try {
-
-                    log.debug("workOrder", workOrder);
                     let sql = `
                     SELECT 
                         CORE_TRACKING.name AS name,
@@ -6176,9 +5379,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     //     };
                     // };
 
-                    log.debug("queryResults", queryResults);
                     // let data = transformData(queryResults);
-                    // log.debug("data", data);
                     return queryResults;
 
                 } catch (error) {
@@ -6706,61 +5907,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                 "AND",
                                 ["item", "anyof", itemId]
                             ],
-                        // columns:
-                        //     [
-                        //         search.createColumn({
-                        //             name: "item",
-                        //             summary: "GROUP",
-                        //             label: "item"
-                        //         }),
-                        //         search.createColumn({
-                        //             name: "inventorynumber",
-                        //             summary: "GROUP",
-                        //             label: "inventory_number"
-                        //         }),
-                        //         search.createColumn({
-                        //             name: "formulatext",
-                        //             summary: "MAX",
-                        //             formula: "MAX({binnumber.internalid})",
-                        //             label: "bin_number"
-                        //         }),
-                        //         search.createColumn({
-                        //             name: "formulatext",
-                        //             summary: "MAX",
-                        //             formula: "MAX({binnumber})",
-                        //             label: "bin_name"
-                        //         }),
-                        //         search.createColumn({
-                        //             name: "formulanumeric",
-                        //             summary: "MAX",
-                        //             formula: "MAX({available})",
-                        //             label: "available"
-                        //         }),
-                        //         search.createColumn({
-                        //             name: "formulanumeric",
-                        //             summary: "MAX",
-                        //             formula: "SUM( {available} )",
-                        //             label: "total_available"
-                        //         }),
-                        //         search.createColumn({
-                        //             name: "formulanumeric",
-                        //             summary: "MAX",
-                        //             formula: "MAX({invnumcommitted})",
-                        //             label: "total_committed"
-                        //         }),
-                        //         search.createColumn({
-                        //             name: "formulanumeric",
-                        //             summary: "MAX",
-                        //             formula: "SUM(NVL({available}, 0)) - MAX(NVL({invnumcommitted}, 0))",
-                        //             label: "calculated_available"
-                        //         }),
-                        //         search.createColumn({
-                        //             name: "status",
-                        //             summary: "GROUP",
-                        //             label: "status"
-                        //         })
-                        //     ]
-
                         columns:
                             [
                                 search.createColumn({
@@ -6949,7 +6095,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             bin_text: result.bin_text.value
                         });
                     });
-                    log.debug("searchResult", searchResult);
                     return { status: 'SUCCESS', reason: 'Result Found', data: binArray };
 
                 } catch (error) {
@@ -6958,106 +6103,12 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                 }
             },
 
-            // /**
-            //  * Get the list of FG Serials for the given assembly builds
-            //  * @param {Array} assemblyBuilds - The list of assembly build IDs
-            //  * @returns {Object} - The list of FG Serials for the given assembly builds
-            //  */
-            // getFGSerialComponents(assemblyBuilds) {
-            //     try {
-            //         let groupedResults = {};
-            //         let fgSerialsSearchObj = search.create({
-            //             type: "customrecord_jj_fg_serials",
-            //             filters: [
-            //                 ["isinactive", "is", "F"],
-            //                 "AND", ["custrecord_jj_fgs_assembly_build", "anyof", assemblyBuilds],
-            //                 "AND", ["custrecord_jj_fgs_serial.isonhand", "is", "T"],
-            //                 "AND", ["custrecord_jj_fgs_serial.quantityavailable", "greaterthan", "0"]
-            //             ],
-            //             columns: [
-            //                 search.createColumn({ name: "internalid", join: "CUSTRECORD_JJ_FGS_ASSEMBLY_BUILD", summary: "GROUP", label: "assembly_build" }),
-            //                 search.createColumn({ name: "custrecord_jj_fgs_serial", summary: "GROUP", label: "serial_number" }),
-            //                 search.createColumn({ name: "custrecord_jj_fgs_gold_weight", summary: "GROUP", label: "gold_weight" }),
-            //                 search.createColumn({ name: "custrecord_jj_fgs_diamond_weight", summary: "GROUP", label: "diamond_weight" }),
-            //                 search.createColumn({ name: "custrecord_jj_fgs_clr_stone_weight", summary: "GROUP", label: "color_stone_weight" }),
-            //                 search.createColumn({ name: "custrecord_jj_fgs_gross_weight", summary: "GROUP", label: "gross_weight" }),
-            //                 search.createColumn({ name: "custrecord_jj_fsc_item", join: "CUSTRECORD_JJ_FSC_SERIAL_NUMBER", summary: "GROUP", label: "item" }),
-            //                 search.createColumn({ name: "custrecord_jj_fsc_quantity", join: "CUSTRECORD_JJ_FSC_SERIAL_NUMBER", summary: "GROUP", label: "quantity" }),
-            //                 search.createColumn({ name: "custrecord_jj_fsc_pieces_value", join: "CUSTRECORD_JJ_FSC_SERIAL_NUMBER", summary: "GROUP", label: "actual_pieces_info" }),
-            //                 search.createColumn({ name: "custrecord_jj_fsc_item_units", join: "CUSTRECORD_JJ_FSC_SERIAL_NUMBER", summary: "GROUP", label: "uom" }),
-            //                 search.createColumn({ name: "isinactive", join: "CUSTRECORD_JJ_FSC_SERIAL_NUMBER", summary: "GROUP", label: "is_component_inactive" }),
-            //                 search.createColumn({ name: "location", join: "CUSTRECORD_JJ_FGS_SERIAL", summary: "GROUP", label: "location" })
-            //             ]
-            //         });
-
-            //         let searchResult = jjUtil.dataSets.iterateSavedSearch({
-            //             searchObj: fgSerialsSearchObj,
-            //             columns: jjUtil.dataSets.fetchSavedSearchColumn(fgSerialsSearchObj, 'label'),
-            //             PAGE_INDEX: null,
-            //             PAGE_SIZE: 1000
-            //         });
-
-            //         searchResult.forEach((result) => {
-            //             const assemblyId = result.assembly_build?.value;
-            //             const fgSeries = result.serial_number?.value;
-            //             const isComponentInactive = result.is_component_inactive;
-
-            //             // Initialize the assembly group if it doesn't exist
-            //             if (!groupedResults[assemblyId]) {
-            //                 groupedResults[assemblyId] = {
-            //                     assembly_build: result.assembly_build,
-            //                     fg_series_groups: {}
-            //                 };
-            //             }
-
-            //             // Initialize the FG series group within the assembly if it doesn't exist
-            //             if (!groupedResults[assemblyId].fg_series_groups[fgSeries]) {
-            //                 groupedResults[assemblyId].fg_series_groups[fgSeries] = {
-            //                     serial_number: result.serial_number,
-            //                     gold_weight: result.gold_weight,
-            //                     diamond_weight: result.diamond_weight,
-            //                     color_stone_weight: result.color_stone_weight,
-            //                     gross_weight: result.gross_weight,
-            //                     location: result.location,
-            //                     componentDetails: []
-            //                 };
-            //             }
-
-            //             // Add component details to the FG series group if the component is active
-            //             if (!isComponentInactive?.value) {
-            //                 groupedResults[assemblyId].fg_series_groups[fgSeries].componentDetails.push({
-            //                     item: result.item,
-            //                     quantity: result.quantity,
-            //                     actual_pieces_info: result.actual_pieces_info,
-            //                     uom: result.uom
-            //                 });
-            //             }
-            //         });
-
-            //         // Convert grouped results to an array
-            //         const formattedResults = Object.values(groupedResults).map(assembly => {
-            //             return {
-            //                 assembly_build: assembly.assembly_build,
-            //                 fg_series_groups: Object.values(assembly.fg_series_groups)
-            //             };
-            //         });
-
-            //         return { status: 'SUCCESS', reason: 'Result Found', data: formattedResults };
-
-            //     } catch (error) {
-            //         log.error('error @ getFGSerialComponents', error.message);
-            //         return { status: 'ERROR', reason: error.message, data: [] };
-            //     }
-            // },
-
             /**
              * Retrieves all unique locations available for FG serials in Direct Repair
              * @returns {Object} { status, reason, data: [{ value: location_id, label: location_name }, ...] }
              */
             getAvailableLocationsForDirectRepair() {
                 try {
-                    log.debug('getAvailableLocationsForDirectRepair - START');
-
                     // Use simple location search to get all active locations
                     let locationSearchObj = search.create({
                         type: "location",
@@ -7077,11 +6128,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             label: result.getValue('name') || 'Unknown Location'
                         });
                         return true;
-                    });
-
-                    log.debug('getAvailableLocationsForDirectRepair - SUCCESS', {
-                        locationsCount: locations.length,
-                        locations: locations
                     });
 
                     return {
@@ -7110,8 +6156,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              */
             listFGSerialsByLocationForDirectRepair(locationId) {
                 try {
-                    log.debug('listFGSerialsByLocationForDirectRepair - START', { locationId: locationId });
-
                     if (!locationId) {
                         return {
                             status: 'ERROR',
@@ -7586,51 +6630,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                 }
             },
 
-            // listSalesOrders() {
-            //     try {
-            //         let salesorderSearchObj = search.create({
-            //             type: "salesorder",
-            //             settings: [{ "name": "consolidationtype", "value": "ACCTTYPE" }],
-            //             filters: [
-            //                 ["type", "anyof", "SalesOrd"],
-            //                 "AND", ["status", "noneof", "SalesOrd:H", "SalesOrd:C", "SalesOrd:G"],
-            //                 "AND", ["location.isinactive", "is", "F"],
-            //                 "AND", ["location.usesbins", "is", "T"],
-            //                 "AND", ["custbody_jj_order_type", "anyof", STOCK_ORDER_ID],
-            //                 "AND", ["mainline", "is", "T"],
-            //                 "AND", ["taxline", "is", "F"],
-            //                 "AND", ["cogs", "is", "F"],
-            //                 "AND", ["location", "noneof", "@NONE@"]
-            //             ],
-            //             columns: [
-            //                 search.createColumn({ name: "internalid", label: "internalid" }),
-            //                 search.createColumn({ name: "tranid", label: "document_number" }),
-            //                 search.createColumn({ name: "location", label: "location" })
-            //             ]
-            //         });
-
-            //         let searchResult = jjUtil.dataSets.iterateSavedSearch({
-            //             searchObj: salesorderSearchObj,
-            //             columns: jjUtil.dataSets.fetchSavedSearchColumn(salesorderSearchObj, 'label'),
-            //             PAGE_INDEX: null,
-            //             PAGE_SIZE: 1000
-            //         });
-
-            //         log.debug("searchResult", searchResult);
-
-            //         let formattedResults = searchResult.map(result => ({
-            //             salesOrder: { value: result.internalid?.value, text: result.document_number?.value },
-            //             location: result.location
-            //         }));
-
-            //         log.debug("formattedResults", formattedResults);
-            //         return { status: 'SUCCESS', reason: 'Result Found', data: formattedResults };
-            //     } catch (error) {
-            //         log.error('error @ listSalesOrders', error.message);
-            //         return { status: 'ERROR', reason: error.message, data: [] };
-            //     }
-            // },
-
             getWorkOrderofBag(bagId) {
                 try {
                     log.debug("bagId", bagId);
@@ -7659,14 +6658,11 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         PAGE_INDEX: null,
                         PAGE_SIZE: 1000
                     });
-                    log.debug("searchResult", searchResult);
                     return searchResult[0]?.custrecord_jj_bagcore_wo?.text.split("#")[1] || '';
                 } catch (error) {
                     log.error('error @ getWorkOrderofBag', error.message);
                     return []
                 }
-
-
             },
 
             getWaxTreeCountForLoad(loadId) {
@@ -7722,55 +6718,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
              */
             getTodaysWaxTreeLoss(locations) {
                 try {
-                    // // Create the search object for the custom record type 'customrecord_jj_wax_tree'  
-                    // let waxTreeSearchObj = search.create({
-                    //     type: "customrecord_jj_wax_tree",
-                    //     filters: [
-                    //         ["isinactive", "is", "F"],
-                    //         "AND", ["custrecord_jj_casting_loss", "isnotempty", ""],
-                    //         "AND", ["formulanumeric: CASE WHEN NVL({custrecord_jj_casting_loss}, 0) != NVL({custrecord_jj_scrap_recovered}, 0) THEN 1 ELSE 0 END", "equalto", "1"],
-                    //         "AND", ["custrecord_jj_to_cutting_date", "within", "today"]
-                    //     ],
-                    //     columns: [
-                    //         search.createColumn({ name: "internalid", label: "Internal ID" }),
-                    //         search.createColumn({ name: "altname", label: "Name" }),
-                    //         search.createColumn({ name: "name", label: "ID" }),
-                    //         search.createColumn({ name: "custrecord_jj_metal_list", label: "Metal" }),
-                    //         search.createColumn({ name: "custrecord_jj_used_lot", label: "Lot" }),
-                    //         search.createColumn({ name: "custrecord_jj_casting_loss", label: "Casting Loss" }),
-                    //         search.createColumn({ name: "custrecord_jj_scrap_recovered", label: "Scrap Recovered" }),
-                    //         search.createColumn({ name: "formulanumeric", formula: "NVL({custrecord_jj_casting_loss}, 0) - NVL({custrecord_jj_scrap_recovered}, 0)", label: "Formula (Numeric)" }),
-                    //         search.createColumn({ name: "parent", join: "CUSTRECORD_JJ_METAL_LIST", label: "Parent" })
-                    //     ]
-                    // });
-
-                    // // Initialize an array to hold wax tree details  
-                    // let waxTrees = [];
-
-                    // // Run the search and process each result  
-                    // waxTreeSearchObj.run().each(function (result) {
-                    //     let itemName = result.getText({ name: "custrecord_jj_metal_list" });
-                    //     let parentName = result.getText({ name: "parent", join: "CUSTRECORD_JJ_METAL_LIST" });
-                    //     let formattedName = parentName ? itemName?.split(parentName + " : ")?.pop() : itemName;
-                    //     // Create an object for the current result  
-                    //     let waxTreeDetails = {
-                    //         waxTreeInternalId: result.getValue({ name: "internalid" }),
-                    //         waxTreeName: result.getValue({ name: "altname" }),
-                    //         waxTreeId: result.getValue({ name: "name" }),
-                    //         itemId: result.getValue({ name: "custrecord_jj_metal_list" }),
-                    //         itemName: formattedName,
-                    //         lotId: result.getValue({ name: "custrecord_jj_used_lot" }),
-                    //         // CastingLoss: result.getValue({ name: "custrecord_jj_casting_loss" }),
-                    //         scrapRecovered: result.getValue({ name: "custrecord_jj_scrap_recovered" }),
-                    //         recoveredQty: "",
-                    //         lossQty: Number(parseFloat(result.getValue({ name: "formulanumeric" }) || 0).toFixed(4))
-                    //     };
-
-                    //     // Push the current wax tree details to the array  
-                    //     waxTrees.push(waxTreeDetails);
-                    //     return true; // Continue to the next result  
-                    // });
-
                     let sqlQuery = `SELECT
                             BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_WAX_TREE.ID) AS ID,
                             BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_WAX_TREE.altname) AS altname,
@@ -7942,7 +6889,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     //     ]
                     // });
                     // let searchResultCount = operationsSearchObj.runPaged().count;
-                    // log.debug("operationsSearchObj result count", searchResultCount);
                     // let sameBagInOperation = false;
                     // operationsSearchObj.run().each(function (result) {
                     //     let bagIdInResult = result.getValue({ name: "custrecord_jj_oprtns_bagno" });
@@ -9322,160 +8268,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     return groupedAmount;
                 }
             },
-
-            // componentDetailsSearch(assemblyBuild, groupedAmount) {
-            //     try {
-            //         let serialLotArray = [];
-            //         // log.debug("Component Details groupedAmount", groupedAmount);
-            //         let assemblyBuildId = assemblyBuild.id;
-            //         let componentSearch = search.create({
-            //             type: "assemblybuild",
-            //             filters: [
-            //                 ["type", "anyof", "Build"],
-            //                 "AND",
-            //                 ["internalid", "anyof", assemblyBuildId],
-            //                 "AND",
-            //                 ["mainline", "is", "F"]
-            //             ],
-            //             columns: [
-            //                 "quantity",
-            //                 search.createColumn({ name: "cseg_jj_raw_type", join: "account" }),
-            //                 search.createColumn({ name: "custitem_jj_stone_quality_group", join: "item", label: "Stone Quality Group" }),
-            //                 "line",
-
-            //             ]
-            //         });
-
-            //         componentSearch.run().each(result => {
-            //             // log.debug("result", result);
-            //             let materialTypeId = result.getValue({ name: "cseg_jj_raw_type", join: "account" }) || "Unknown";
-            //             log.debug("Material Type ID", materialTypeId);
-
-            //             let quantity = Math.abs(parseFloat(result.getValue("quantity")) || 0);
-            //             log.debug("Quantity", quantity);
-
-            //             let stoneQualityGroup = result.getValue({ name: "custitem_jj_stone_quality_group", join: "item" }) || "";
-            //             log.debug("stoneQualityGroup", stoneQualityGroup);
-
-            //             let lineNum = result.getValue("line");
-
-            //             if (materialTypeId == JEWELRY_TYPE_ID) {
-
-            //                 let index = assemblyBuild.getSublistLineWithValue({
-            //                     sublistId: 'component',
-            //                     fieldId: 'linenumber',
-            //                     value: lineNum
-            //                 });
-
-            //                 let hasSubrecord = assemblyBuild.hasSublistSubrecord({
-            //                     sublistId: 'component',
-            //                     fieldId: 'componentinventorydetail',
-            //                     line: index
-            //                 });
-            //                 log.debug("Has Subrecord", hasSubrecord);
-            //                 if (hasSubrecord) {
-            //                     let componentInventoryDetail = assemblyBuild.getSublistSubrecord({
-            //                         sublistId: 'component',
-            //                         fieldId: 'componentinventorydetail',
-            //                         line: index
-            //                     });
-            //                     log.debug("Component Inventory Detail", componentInventoryDetail);
-            //                     let inventoryAssignmentCount = componentInventoryDetail.getLineCount({ sublistId: 'inventoryassignment' });
-            //                     log.debug("Inventory Assignment Count", inventoryAssignmentCount);
-            //                     for (let i = 0; i < inventoryAssignmentCount; i++) {
-            //                         let lotNumber = componentInventoryDetail.getSublistValue({
-            //                             sublistId: 'inventoryassignment',
-            //                             fieldId: 'issueinventorynumber',
-            //                             line: i
-            //                         }) || "";
-            //                         log.debug("Lot Number", lotNumber);
-            //                         serialLotArray.push(lotNumber);
-            //                     }
-            //                 }
-            //             }
-
-            //             if (!groupedAmount[materialTypeId]) {
-            //                 groupedAmount[materialTypeId] = { totalQuantity: 0 };
-            //                 // log.debug("Grouped Amount Before Component Details", groupedAmount);
-            //                 [materialTypeId].totalQuantity = 0;
-            //             }
-
-            //             groupedAmount[materialTypeId].totalQuantity = parseFloat(groupedAmount[materialTypeId].totalQuantity || 0) + parseFloat(quantity || 0);
-
-            //             if (stoneQualityGroup == PARTY_DIAMOND_QUALITY) {
-            //                 if (!groupedAmount["party_diamond"]) {
-            //                     groupedAmount["party_diamond"] = { totalQuantity: 0 };
-            //                     groupedAmount["party_diamond"].totalQuantity = 0;
-            //                 }
-
-            //                 groupedAmount["party_diamond"].totalQuantity = parseFloat(groupedAmount["party_diamond"].totalQuantity || 0) + parseFloat(quantity || 0);
-            //             }
-            //             log.debug("Grouped Amount after Component Details", groupedAmount);
-
-            //             return true;
-            //         });
-
-            //         if (serialLotArray.length > 0) {
-            //             let totalGoldWeight = 0, totalDiamondWeight = 0, totalColorStoneWeight = 0, totalPartyDiamondWeight = 0;
-            //             let totalGoldAmount = 0, totalDiamondAmount = 0, totalColorStoneAmount = 0, totalPartyDiamondAmount = 0, totalMakingChargeAmount = 0;
-
-            //             let lotSearch = search.create({
-            //                 type: "inventorynumber", // Use custom type if applicable
-            //                 filters: [["internalid", "anyof", serialLotArray]],
-            //                 columns: [
-            //                     "custitemnumber_jj_serial_num_net_weight",
-            //                     "custitemnumber_jj_serial_num_diamond_weight",
-            //                     "custitemnumber_jj_serial_num_cs_weight",
-            //                     "custitemnumber_jj_serial_num_partydiamond_wt",
-            //                     "custitemnumber_jj_cost_gold",
-            //                     "custitemnumber_jj_cost_diamond",
-            //                     "custitemnumber_jj_cost_color_stone",
-            //                     "custitemnumber_jj_cost_making_charge",
-            //                     "custitemnumber_jj_cost_party_diamond",
-            //                 ]
-            //             });
-
-            //             lotSearch.run().each(res => {
-            //                 totalGoldWeight += parseFloat(res.getValue("custitemnumber_jj_serial_num_net_weight") || 0);
-            //                 totalDiamondWeight += parseFloat(res.getValue("custitemnumber_jj_serial_num_diamond_weight") || 0) / CARATS_TO_GRAMS_CONST;
-            //                 totalColorStoneWeight += parseFloat(res.getValue("custrecord_colorstone_weight") || 0) / CARATS_TO_GRAMS_CONST;
-            //                 totalPartyDiamondWeight += parseFloat(res.getValue("custitemnumber_jj_serial_num_partydiamond_wt") || 0) / CARATS_TO_GRAMS_CONST;
-
-            //                 totalGoldAmount += parseFloat(res.getValue("custitemnumber_jj_cost_gold") || 0);
-            //                 totalDiamondAmount += parseFloat(res.getValue("custitemnumber_jj_cost_diamond") || 0);
-            //                 totalColorStoneAmount += parseFloat(res.getValue("custitemnumber_jj_cost_color_stone") || 0);
-            //                 totalMakingChargeAmount = parseFloat(res.getValue("custitemnumber_jj_cost_making_charge") || 0);
-            //                 totalPartyDiamondAmount = parseFloat(res.getValue("custitemnumber_jj_cost_party_diamond") || 0);
-
-            //                 return true;
-            //             });
-
-            //             groupedAmount[GOLD_TYPE_ID].totalQuantity = (groupedAmount[GOLD_TYPE_ID].totalQuantity || 0) + totalGoldWeight;
-            //             groupedAmount[GOLD_TYPE_ID].totalCreditAmount = (groupedAmount[GOLD_TYPE_ID].totalCreditAmount || 0) + totalGoldAmount;
-
-            //             groupedAmount[DIAMOND_TYPE_ID].totalQuantity = (groupedAmount[DIAMOND_TYPE_ID].totalQuantity || 0) + totalDiamondWeight;
-            //             groupedAmount[DIAMOND_TYPE_ID].totalCreditAmount = (groupedAmount[DIAMOND_TYPE_ID].totalCreditAmount || 0) + totalDiamondAmount;
-
-            //             groupedAmount[COLORSTONE_TYPE_ID].totalQuantity = (groupedAmount[COLORSTONE_TYPE_ID].totalQuantity || 0) + totalColorStoneWeight;
-            //             groupedAmount[COLORSTONE_TYPE_ID].totalCreditAmount = (groupedAmount[COLORSTONE_TYPE_ID].totalCreditAmount || 0) + totalColorStoneAmount;
-
-            //             groupedAmount["party_diamond"].totalQuantity = (groupedAmount["party_diamond"].totalQuantity || 0) + totalPartyDiamondWeight;
-            //             groupedAmount["party_diamond"].totalCreditAmount = (groupedAmount["party_diamond"].totalCreditAmount || 0) + totalPartyDiamondAmount;
-
-            //             groupedAmount[MAKING_CHARGE_TYPE_ID].totalCreditAmount = (groupedAmount[MAKING_CHARGE_TYPE_ID].totalCreditAmount || 0) + totalMakingChargeAmount;
-
-            //             if (groupedAmount[JEWELRY_TYPE_ID]) {
-            //                 delete groupedAmount[JEWELRY_TYPE_ID];
-            //             }
-
-            //         }
-
-            //         return groupedAmount;
-
-            //     } catch (error) {
-            //         log.error("Error in componentDetailsSearch", error);
-            //     }
-            // }
 
             /**
              * Fetch metal purity details grouped by metal quality ID
@@ -11049,454 +9841,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     };
                 }
             },
-
-            // /**
-            //  * Retrieves FG Serial Components for the Direct Repair page
-            //  * Takes serial number, fetches from inventorynumber, then FG Serial, then components via joins
-            //  * 
-            //  * @param {String} serialNumber - The serial number (e.g., "SN-001")
-            //  * @returns {Object} - Object containing status, reason, and components data
-            //  */
-            // getFGSerialComponentsBySerialId(serialNumber) {
-            //     try {
-            //         log.debug('getFGSerialComponentsBySerialId START', { serialNumber: serialNumber });
-
-            //         if (!serialNumber) {
-            //             log.error('VALIDATION FAILED: Serial number is empty or null', serialNumber);
-            //             return {
-            //                 status: 'ERROR',
-            //                 reason: 'Serial number is required',
-            //                 data: []
-            //             };
-            //         }
-
-            //         const cleanSerialNumber = String(serialNumber).trim();
-            //         log.debug('Clean serial number', { original: serialNumber, cleaned: cleanSerialNumber });
-
-            //         // Step 1: Fetch FG Serial record using cleanSerialNumber (which is the FG Serial internal ID)
-            //         // and get the custrecord_jj_fgs_serial field (inventory number internal ID)
-            //         log.debug('STEP 1: Fetching FG Serial record using serial ID', { fgSerialId: cleanSerialNumber });
-            //         const fgSerialLookupSearch = search.create({
-            //             type: 'customrecord_jj_fg_serials',
-            //             filters: [
-            //                 ['internalid', 'anyof', cleanSerialNumber],
-            //                 'AND',
-            //                 ['isinactive', 'is', 'F']
-            //             ],
-            //             columns: [
-            //                 search.createColumn({ name: 'internalid' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_serial' })
-            //             ]
-            //         });
-
-            //         let fgSerialId = null;
-            //         let serialInternalId = null;
-            //         let fgSerialFound = false;
-
-            //         fgSerialLookupSearch.run().each(function (result) {
-            //             fgSerialId = result.getValue({ name: 'internalid' });
-            //             serialInternalId = result.getValue({ name: 'custrecord_jj_fgs_serial' });
-
-            //             log.debug('FG Serial record found', {
-            //                 fgSerialId: fgSerialId,
-            //                 serialInternalId: serialInternalId
-            //             });
-
-            //             fgSerialFound = true;
-            //             return false; // Stop after first result
-            //         });
-
-            //         if (!fgSerialFound || !fgSerialId || !serialInternalId) {
-            //             log.debug('NO FG SERIAL FOUND', {
-            //                 cleanSerialNumber: cleanSerialNumber
-            //             });
-            //             return {
-            //                 status: 'WARNING',
-            //                 reason: `No FG Serial record found for serial ID: ${cleanSerialNumber}`,
-            //                 data: []
-            //             };
-            //         }
-
-            //         log.debug('STEP 1 COMPLETE', { fgSerialId: fgSerialId, serialInternalId: serialInternalId });
-
-            //         // Step 2: Fetch inventory number details using serialInternalId
-            //         log.debug('STEP 2: Fetching inventory number details using serialInternalId', { serialInternalId: serialInternalId });
-            //         const inventorynumberSearch = search.create({
-            //             type: 'inventorynumber',
-            //             filters: [
-            //                 ['internalid', 'anyof', serialInternalId]
-            //             ],
-            //             columns: [
-            //                 search.createColumn({ name: 'internalid' }),
-            //                 search.createColumn({ name: 'inventorynumber' })
-            //             ]
-            //         });
-
-            //         let inventorynumberFound = false;
-
-            //         inventorynumberSearch.run().each(function (result) {
-            //             const invNumber = result.getValue({ name: 'inventorynumber' });
-
-            //             log.debug('Inventory number record found', {
-            //                 serialInternalId: serialInternalId,
-            //                 inventorynumber: invNumber
-            //             });
-
-            //             inventorynumberFound = true;
-            //             return false; // Stop after first result
-            //         });
-
-            //         if (!inventorynumberFound) {
-            //             log.debug('NO INVENTORY NUMBER FOUND', {
-            //                 serialInternalId: serialInternalId
-            //             });
-            //             return {
-            //                 status: 'WARNING',
-            //                 reason: `No inventory number found for serial internal ID: ${serialInternalId}`,
-            //                 data: []
-            //             };
-            //         }
-
-            //         log.debug('STEP 2 COMPLETE', { serialInternalId: serialInternalId });
-
-            //         // Step 3: Fetch components from FG Serial record using joins
-            //         log.debug('STEP 3: Fetching components from FG Serial record using joins', { fgSerialId: fgSerialId });
-
-            //         const fgSerialWithComponentsSearch = search.create({
-            //             type: 'customrecord_jj_fg_serials',
-            //             filters: [
-            //                 ['internalid', 'anyof', fgSerialId],
-            //                 'AND',
-            //                 ['isinactive', 'is', 'F']
-            //             ],
-            //             columns: [
-            //                 search.createColumn({ name: 'internalid' }),
-            //                 // FG Serial fields - All fields displayed in UI
-            //                 search.createColumn({ name: 'created' }),
-            //                 search.createColumn({ name: 'custrecord_jj_asm_build_date' }),
-            //                 search.createColumn({ name: 'custrecord_jj_asm_unbuild' }),
-            //                 search.createColumn({ name: 'custrecord_jj_unbuild_date' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_alloy_cost' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_alloy_weight' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_assembly_build' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_assembly_item' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_bag_core_tracking' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_bom_revision' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_clr_stone_cost' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_clr_stone_weight' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_diamond_cost' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_diamond_weight' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_gold_cost' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_gold_weight' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_gross_weight' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_making_charge_cost' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_pure_weight' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_related_so' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fgs_related_so_date' }),
-            //                 search.createColumn({ name: 'custrecord_jj_sl_customer' }),
-            //                 // Join to get components from the FG Serial record
-            //                 search.createColumn({ name: 'custrecord_jj_fsc_item', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fsc_quantity', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fsc_barcode_quantity', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fsc_cost', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fsc_pieces_value', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' }),
-            //                 search.createColumn({ name: 'custrecord_jj_fsc_item_units', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' })
-            //             ]
-            //         });
-
-            //         let componentsData = [];
-            //         let componentCount = 0;
-            //         let fgSerialDetails = null;
-
-            //         fgSerialWithComponentsSearch.run().each(function (result) {
-            //             // Extract FG Serial details (only once)
-            //             if (!fgSerialDetails) {
-            //                 fgSerialDetails = {
-            //                     created: result.getValue({ name: 'created' }),
-            //                     asm_build_date: result.getValue({ name: 'custrecord_jj_asm_build_date' }),
-            //                     assembly_unbuild_name: result.getText({ name: 'custrecord_jj_asm_unbuild' }),
-            //                     assembly_unbuild_date: result.getValue({ name: 'custrecord_jj_unbuild_date' }),
-            //                     assembly_unbuild_id: result.getValue({ name: 'custrecord_jj_asm_unbuild' }),
-            //                     alloy_cost: result.getValue({ name: 'custrecord_jj_fgs_alloy_cost' }),
-            //                     alloy_weight: result.getValue({ name: 'custrecord_jj_fgs_alloy_weight' }),
-            //                     assembly_build_name: result.getText({ name: 'custrecord_jj_fgs_assembly_build' }),
-            //                     assembly_build_id: result.getValue({ name: 'custrecord_jj_fgs_assembly_build' }),
-            //                     assembly_item_name: result.getText({ name: 'custrecord_jj_fgs_assembly_item' }),
-            //                     bag_core_tracking: result.getValue({ name: 'custrecord_jj_fgs_bag_core_tracking' }),
-            //                     bom_revision: result.getText({ name: 'custrecord_jj_fgs_bom_revision' }),
-            //                     clr_stone_cost: result.getValue({ name: 'custrecord_jj_fgs_clr_stone_cost' }),
-            //                     clr_stone_weight: result.getValue({ name: 'custrecord_jj_fgs_clr_stone_weight' }),
-            //                     diamond_cost: result.getValue({ name: 'custrecord_jj_fgs_diamond_cost' }),
-            //                     diamond_weight: result.getValue({ name: 'custrecord_jj_fgs_diamond_weight' }),
-            //                     gold_cost: result.getValue({ name: 'custrecord_jj_fgs_gold_cost' }),
-            //                     gold_weight: result.getValue({ name: 'custrecord_jj_fgs_gold_weight' }),
-            //                     gross_weight: result.getValue({ name: 'custrecord_jj_fgs_gross_weight' }),
-            //                     making_charge_cost: result.getValue({ name: 'custrecord_jj_fgs_making_charge_cost' }),
-            //                     pure_weight: result.getValue({ name: 'custrecord_jj_fgs_pure_weight' }),
-            //                     related_so: result.getText({ name: 'custrecord_jj_fgs_related_so' }),
-            //                     related_so_date: result.getValue({ name: 'custrecord_jj_fgs_related_so_date' }),
-            //                     customer_name: result.getText({ name: 'custrecord_jj_sl_customer' })
-            //                 };
-            //                 log.debug('FG Serial Details extracted', fgSerialDetails);
-            //             }
-
-            //             componentCount++;
-
-            //             const itemId = result.getValue({ name: 'custrecord_jj_fsc_item', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' });
-            //             const itemText = result.getText({ name: 'custrecord_jj_fsc_item', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' });
-            //             const quantity = result.getValue({ name: 'custrecord_jj_fsc_quantity', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' });
-            //             const barcodeQuantity = result.getValue({ name: 'custrecord_jj_fsc_barcode_quantity', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' });
-            //             const cost = result.getValue({ name: 'custrecord_jj_fsc_cost', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' });
-            //             const pieces = result.getValue({ name: 'custrecord_jj_fsc_pieces_value', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' });
-            //             const unitsId = result.getValue({ name: 'custrecord_jj_fsc_item_units', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' });
-            //             const unitsText = result.getText({ name: 'custrecord_jj_fsc_item_units', join: 'CUSTRECORD_JJ_FSC_SERIAL_NUMBER' });
-
-            //             log.debug('Component result #' + componentCount, {
-            //                 item_id: itemId,
-            //                 item_text: itemText,
-            //                 quantity: quantity,
-            //                 barcode_quantity: barcodeQuantity,
-            //                 cost: cost,
-            //                 pieces: pieces,
-            //                 units_id: unitsId,
-            //                 units_text: unitsText
-            //             });
-
-            //             componentsData.push({
-            //                 item: itemId,
-            //                 item_text: itemText,
-            //                 quantity: quantity,
-            //                 barcode_quantity: barcodeQuantity,
-            //                 cost: cost,
-            //                 pieces: pieces,
-            //                 units: unitsId,
-            //                 units_text: unitsText
-            //             });
-            //             return true;
-            //         });
-
-            //         log.debug('STEP 3 COMPLETE', {
-            //             fgSerialId: fgSerialId,
-            //             componentCount: componentCount,
-            //             componentsData: componentsData,
-            //             fgSerialDetails: fgSerialDetails
-            //         });
-
-            //         // Step 4: Fetch component inventory tracking data from FG Serial Components linked to assembly build
-            //         log.debug('═══════════════════════════════════════════════════════════════', {
-            //             message: 'STEP 4 START: Fetching component inventory tracking'
-            //         });
-            //         log.debug('STEP 4: Input Parameters', {
-            //             assemblyBuildId: fgSerialDetails?.assembly_build_id,
-            //             fgSerialId: fgSerialId,
-            //             hasAssemblyBuild: !!fgSerialDetails?.assembly_build_id,
-            //             hasFgSerialId: !!fgSerialId
-            //         });
-
-            //         let componentInventoryTrackingData = [];
-
-            //         if (fgSerialDetails?.assembly_build_id && fgSerialId) {
-            //             log.debug('✓ STEP 4: Condition passed - proceeding with search');
-            //             try {
-            //                 // Get FG Serial Component IDs linked to this assembly build
-            //                 log.debug('STEP 4: Creating FG Serial Component search', {
-            //                     searchType: 'customrecord_jj_fg_serial_components',
-            //                     filterFgSerialId: fgSerialId,
-            //                     filterAssemblyBuildId: fgSerialDetails.assembly_build_id
-            //                 });
-
-            //                 const fgSerialComponentSearch = search.create({
-            //                     type: 'customrecord_jj_fg_serial_components',
-            //                     filters: [
-            //                         ['custrecord_jj_fsc_serial_number', 'anyof', fgSerialId],
-            //                         'AND',
-            //                         ['isinactive', 'is', 'F']
-            //                     ],
-            //                     columns: [
-            //                         search.createColumn({ name: 'internalid' }),
-            //                         search.createColumn({ name: 'custrecord_jj_fsc_item' })
-            //                     ]
-            //                 });
-
-            //                 let fgSerialComponentIds = [];
-            //                 let componentSearchCount = 0;
-            //                 fgSerialComponentSearch.run().each(function (result) {
-            //                     componentSearchCount++;
-
-            //                     const componentId = result.getValue({ name: 'internalid' });
-            //                     const itemId = result.getValue({ name: 'custrecord_jj_fsc_item' });
-
-            //                     log.debug('STEP 4: FG Serial Component found #' + componentSearchCount, {
-            //                         componentId: componentId,
-            //                         itemId: itemId
-            //                     });
-
-            //                     if (componentId) {
-            //                         const trackingResult = this.getFGSerialComponentInventoryTracking(componentId);
-
-            //                         if (trackingResult.status === 'SUCCESS' && trackingResult.data.length > 0) {
-
-            //                             componentInventoryTrackingData.push({
-            //                                 fgSerialComponentId: componentId,
-            //                                 itemId: itemId,
-            //                                 inventoryTracking: trackingResult.data
-            //                             });
-
-            //                         }
-            //                     }
-
-            //                     return true;
-            //                 }.bind(this));
-
-            //                 log.debug('✓ STEP 4: FG Serial Component search completed', {
-            //                     assemblyBuildId: fgSerialDetails.assembly_build_id,
-            //                     fgSerialId: fgSerialId,
-            //                     fgSerialComponentIds: fgSerialComponentIds,
-            //                     componentCount: fgSerialComponentIds.length,
-            //                     totalSearchResults: componentSearchCount
-            //                 });
-
-            //                 // Fetch inventory tracking data for each FG Serial Component
-            //                 if (fgSerialComponentIds.length > 0) {
-            //                     log.debug('╔════════════════════════════════════════════════════════════════════════════════════╗', {
-            //                         message: 'STEP 4.2: PRIMARY FOCUS - FETCHING INVENTORY TRACKING DATA FOR EACH COMPONENT'
-            //                     });
-            //                     log.debug('STEP 4.2: Processing ' + fgSerialComponentIds.length + ' FG Serial Components for inventory tracking', {
-            //                         totalComponentsToProcess: fgSerialComponentIds.length,
-            //                         componentIds: fgSerialComponentIds
-            //                     });
-
-            //                     fgSerialComponentIds.forEach(function (componentId, index) {
-            //                         log.debug('╔─────────────────────────────────────────────────────────────────────────────────╗', {
-            //                             message: 'STEP 4.2.' + (index + 1) + ': PROCESSING COMPONENT #' + (index + 1) + ' OF ' + fgSerialComponentIds.length
-            //                         });
-
-            //                         log.debug('STEP 4.2.' + (index + 1) + ': CALLING getFGSerialComponentInventoryTracking', {
-            //                             fgSerialComponentId: componentId,
-            //                             componentIndex: index + 1,
-            //                             totalComponents: fgSerialComponentIds.length,
-            //                             message: 'This function will search for all inventory tracking records linked to this component'
-            //                         });
-
-            //                         const trackingResult = this.getFGSerialComponentInventoryTracking(componentId);
-
-            //                         log.debug('STEP 4.2.' + (index + 1) + ': RESULT FROM getFGSerialComponentInventoryTracking', {
-            //                             fgSerialComponentId: componentId,
-            //                             status: trackingResult.status,
-            //                             reason: trackingResult.reason,
-            //                             recordCount: trackingResult.data ? trackingResult.data.length : 0,
-            //                             message: 'Returned ' + (trackingResult.data ? trackingResult.data.length : 0) + ' inventory tracking records'
-            //                         });
-
-            //                         if (trackingResult.status === 'SUCCESS' && trackingResult.data.length > 0) {
-            //                             log.debug('STEP 4.2.' + (index + 1) + ': INVENTORY TRACKING DATA DETAILS', {
-            //                                 fgSerialComponentId: componentId,
-            //                                 recordCount: trackingResult.data.length,
-            //                                 trackingRecords: trackingResult.data,
-            //                                 message: 'IMPORTANT: These are the lot numbers, quantities, and pieces for this component'
-            //                             });
-
-            //                             componentInventoryTrackingData.push({
-            //                                 fgSerialComponentId: componentId,
-            //                                 itemId: itemId,
-            //                                 inventoryTracking: trackingResult.data
-            //                             });
-
-
-            //                             log.debug('✓ STEP 4.2.' + (index + 1) + ': INVENTORY TRACKING SUCCESSFULLY ADDED TO RESULTS', {
-            //                                 fgSerialComponentId: componentId,
-            //                                 recordCount: trackingResult.data.length,
-            //                                 totalTrackingDataCollected: componentInventoryTrackingData.length,
-            //                                 message: 'Component tracking data is now part of the final response'
-            //                             });
-            //                         } else {
-            //                             log.debug('⚠ STEP 4.2.' + (index + 1) + ': NO INVENTORY TRACKING DATA FOUND', {
-            //                                 fgSerialComponentId: componentId,
-            //                                 status: trackingResult.status,
-            //                                 reason: trackingResult.reason,
-            //                                 message: 'This component has no inventory tracking records'
-            //                             });
-            //                         }
-
-            //                         log.debug('╚─────────────────────────────────────────────────────────────────────────────────╝', {
-            //                             message: 'STEP 4.2.' + (index + 1) + ' COMPLETE'
-            //                         });
-            //                     }.bind(this));
-
-            //                     log.debug('╚════════════════════════════════════════════════════════════════════════════════════╝', {
-            //                         message: 'STEP 4.2 COMPLETE: ALL COMPONENTS PROCESSED'
-            //                     });
-            //                 } else {
-            //                     log.debug('⚠ STEP 4: No FG Serial Components found for assembly build', {
-            //                         assemblyBuildId: fgSerialDetails.assembly_build_id,
-            //                         fgSerialId: fgSerialId
-            //                     });
-            //                 }
-
-            //                 log.debug('╔════════════════════════════════════════════════════════════════════════════════════╗', {
-            //                     message: 'STEP 4 FINAL RESULTS: COMPONENT INVENTORY TRACKING DATA'
-            //                 });
-            //                 log.debug('STEP 4 COMPLETE - SUMMARY', {
-            //                     totalComponentsProcessed: fgSerialComponentIds.length,
-            //                     totalComponentsWithTrackingData: componentInventoryTrackingData.length,
-            //                     message: 'Summary of all inventory tracking data collected'
-            //                 });
-            //                 log.debug('STEP 4 COMPLETE - DETAILED TRACKING DATA', {
-            //                     componentInventoryTrackingData: componentInventoryTrackingData,
-            //                     message: 'IMPORTANT: This is the primary data - all lot numbers, quantities, and pieces for each component'
-            //                 });
-            //                 log.debug('╚════════════════════════════════════════════════════════════════════════════════════╝', {
-            //                     message: 'STEP 4 COMPLETE'
-            //                 });
-
-            //             } catch (trackingError) {
-            //                 log.error('✗ STEP 4: ERROR - Exception caught', {
-            //                     error: trackingError.message || String(trackingError),
-            //                     stack: trackingError.stack,
-            //                     assemblyBuildId: fgSerialDetails.assembly_build_id,
-            //                     fgSerialId: fgSerialId
-            //                 });
-            //                 // Continue without tracking data - don't fail the entire operation
-            //             }
-            //         } else {
-            //             log.debug('⚠ STEP 4: Condition NOT met - skipping inventory tracking fetch', {
-            //                 hasAssemblyBuildId: !!fgSerialDetails?.assembly_build_id,
-            //                 hasFgSerialId: !!fgSerialId,
-            //                 assemblyBuildId: fgSerialDetails?.assembly_build_id,
-            //                 fgSerialId: fgSerialId
-            //             });
-            //         }
-
-            //         log.debug('getFGSerialComponentsBySerialId - SUCCESS', {
-            //             serialNumber: cleanSerialNumber,
-            //             serialInternalId: serialInternalId,
-            //             fgSerialId: fgSerialId,
-            //             componentsCount: componentsData.length,
-            //             componentInventoryTrackingCount: componentInventoryTrackingData.length,
-            //             fgSerialDetails: fgSerialDetails
-            //         });
-
-            //         return {
-            //             status: 'SUCCESS',
-            //             reason: 'Components retrieved successfully',
-            //             data: componentsData,
-            //             fgSerialDetails: fgSerialDetails,
-            //             componentInventoryTracking: componentInventoryTrackingData
-            //         };
-
-            //     } catch (error) {
-            //         log.error('getFGSerialComponentsBySerialId ERROR', {
-            //             error: error.message || String(error),
-            //             stack: error.stack,
-            //             serialNumber: serialNumber
-            //         });
-            //         return {
-            //             status: 'ERROR',
-            //             reason: error.message || 'Failed to retrieve components',
-            //             data: []
-            //         };
-            //     }
-            // },
 
             getFGSerialComponentsNested(fgSerialId) {
                 try {

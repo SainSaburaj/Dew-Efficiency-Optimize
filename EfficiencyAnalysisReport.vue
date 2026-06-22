@@ -152,7 +152,7 @@
 
                         <!-- Bag Count -->
                         <div class="bg-blue-50 p-1 rounded mb-2 text-center">
-                            <p class="text-[10px] font-semibold text-gray-700">No. of Bags: <span class="text-blue-600">{{ getLocationTotalBagCount(location) || 0 }}</span></p>
+                            <p class="text-[10px] font-semibold text-gray-700">No. of Bags: <span class="text-blue-600">{{ location.location_bag_count || 0 }}</span></p>
                         </div>
 
                         <div class="text-[11px] font-semibold w-full text-center bg-gray-100 rounded p-1 mb-1">Issued & Loss Quantity</div>
@@ -468,43 +468,27 @@
             <!-- Table Section -->
             <div v-if="showTable" class="bg-white p-3 rounded-lg shadow mt-4">
                 <div class="flex justify-between items-center mb-3">
-                    <h2 class="text-md font-bold text-gray-700">
-                        {{ showEmployeesTable ? 'Employee Details' : 'Department Details' }}
-                    </h2>
+                    <div class="flex items-center space-x-4">
+                        <h2 class="text-md font-bold text-gray-700">
+                            {{ showEmployeesTable ? 'Employee Details' : 'Department Details' }}
+                        </h2>
+                        
+                    </div>
                     <div class="flex items-center space-x-2">
-                        <button 
-                            @click="decimalPlaces = 2"
-                            :class="[
-                                'px-4 py-2 rounded-lg font-semibold text-sm transition-all',
-                                decimalPlaces === 2 
-                                    ? 'border-2 border-blue-500 bg-blue-100 text-blue-500 hover:shadow-lg' 
-                                    : 'border-2 border-gray-200 bg-gray-100 text-gray-500 hover:shadow-lg'
-                            ]"
-                        >
-                            Round to 2
+                        <button v-if="showEmployeesTable && selectedEmployees.length > 0" 
+                            @click="toggleExpandAllEmployees" 
+                            class="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1 rounded hover:bg-blue-100 transition-colors shadow-sm font-semibold">
+                            <i :class="expandedEmployees.length === selectedEmployees.length ? 'fas fa-compress-alt mr-1' : 'fas fa-expand-alt mr-1'"></i>
+                            {{ expandedEmployees.length === selectedEmployees.length ? 'Collapse All' : 'Expand All' }}
                         </button>
-                        <button 
-                            @click="decimalPlaces = 3"
-                            :class="[
-                                'px-4 py-2 rounded-lg font-semibold text-sm transition-all',
-                                decimalPlaces === 3 
-                                    ? 'border-2 border-blue-500 bg-blue-100 text-blue-500 hover:shadow-lg' 
-                                    : 'border-2 border-gray-200 bg-gray-100 text-gray-500 hover:shadow-lg'
-                            ]"
-                        >
-                            Round to 3
-                        </button>
-                        <button 
-                            @click="decimalPlaces = 4"
-                            :class="[
-                                'px-4 py-2 rounded-lg font-semibold text-sm transition-all',
-                                decimalPlaces === 4 
-                                    ? 'border-2 border-blue-500 bg-blue-100 text-blue-500 hover:shadow-lg' 
-                                    : 'border-2 border-gray-200 bg-gray-100 text-gray-500 hover:shadow-lg'
-                            ]"
-                        >
-                            Round to 4
-                        </button>
+                        <div class="flex items-center bg-gray-100 p-0.5 rounded border border-gray-200 ml-2">
+                            <span class="px-2 py-1 text-[10px] text-gray-500 font-semibold tracking-wide uppercase">Rounding</span>
+                            <div class="flex space-x-1">
+                                <button @click="decimalPlaces = 2" :class="['w-8 pt-0.5 text-[11px] font-bold rounded transition-all', decimalPlaces === 2 ? 'bg-white text-gray-800 shadow-sm border border-gray-200' : 'text-gray-500 hover:bg-gray-200']">2</button>
+                                <button @click="decimalPlaces = 3" :class="['w-8 pt-0.5 text-[11px] font-bold rounded transition-all', decimalPlaces === 3 ? 'bg-white text-gray-800 shadow-sm border border-gray-200' : 'text-gray-500 hover:bg-gray-200']">3</button>
+                                <button @click="decimalPlaces = 4" :class="['w-8 pt-0.5 text-[11px] font-bold rounded transition-all', decimalPlaces === 4 ? 'bg-white text-gray-800 shadow-sm border border-gray-200' : 'text-gray-500 hover:bg-gray-200']">4</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="table-container overflow-x-auto overflow-y-auto max-h-[45rem] scrollbar-custom">
@@ -512,39 +496,39 @@
                         <thead class="bg-gray-100 text-gray-600 uppercase text-[11px]"
                             style="position: sticky; top: 0; z-index: 10;">
                             <tr>
-                                <th class="px-3 py-2 text-left font-semibold">#</th>
-                                <th class="px-3 py-2 text-left font-semibold">
+                                <th class="px-3 py-2 text-center font-semibold">#</th>
+                                <th class="px-3 py-2 text-center font-semibold">
                                     {{ showEmployeesTable ? 'Employees' : 'Department' }}
                                 </th>
-                                <th class="px-3 py-2 text-left font-semibold">No. of Bags</th>
+                                <th class="px-3 py-2 text-center font-semibold">No. of Bags</th>
                                 <!-- Hidden columns (kept in Excel export) -->
-                                <!-- <th class="px-3 py-2 text-left font-semibold">Item category</th> -->
-                                <!-- <th class="px-3 py-2 text-left font-semibold">Sub Category</th> -->
-                                <!-- <th class="px-3 py-2 text-left font-semibold">Bag Count</th> -->
-                                <!-- <th class="px-3 py-2 text-left font-semibold">Style Number</th> -->
-                                <!-- <th class="px-3 py-2 text-left font-semibold">Bag Name</th> -->
+                                <!-- <th class="px-3 py-2 text-center font-semibold">Item category</th> -->
+                                <!-- <th class="px-3 py-2 text-center font-semibold">Sub Category</th> -->
+                                <!-- <th class="px-3 py-2 text-center font-semibold">Bag Count</th> -->
+                                <!-- <th class="px-3 py-2 text-center font-semibold">Style Number</th> -->
+                                <!-- <th class="px-3 py-2 text-center font-semibold">Bag Name</th> -->
 
-                                <th class="px-3 py-2 text-left font-semibold">Issued Net Weight Gold</th>
-                                <th class="px-3 py-2 text-left font-semibold">Received Quantity Gold</th>
-                                <th class="px-3 py-2 text-left font-semibold">Gross Loss</th>
-                                <th class="px-3 py-2 text-left font-semibold">Gross Loss %</th>
-                                <!-- <th class="px-3 py-2 text-left font-semibold">Purity %</th> -->
+                                <th class="px-3 py-2 text-center font-semibold">Issued Net Weight Gold</th>
+                                <th class="px-3 py-2 text-center font-semibold">Received Quantity Gold</th>
+                                <th class="px-3 py-2 text-center font-semibold">Gross Loss</th>
+                                <th class="px-3 py-2 text-center font-semibold">Gross Loss %</th>
+                                <!-- <th class="px-3 py-2 text-center font-semibold">Purity %</th> -->
 
-                                <th class="px-3 py-2 text-left font-semibold">Pure Weight</th>
-                                <th class="px-3 py-2 text-left font-semibold">Pure Loss</th>
+                                <th class="px-3 py-2 text-center font-semibold">Pure Weight</th>
+                                <th class="px-3 py-2 text-center font-semibold">Pure Loss</th>
 
-                                <th class="px-3 py-2 text-left font-semibold">Net Loss</th>
-                                <th class="px-3 py-2 text-left font-semibold">Net Loss %</th>
+                                <th class="px-3 py-2 text-center font-semibold">Net Loss</th>
+                                <th class="px-3 py-2 text-center font-semibold">Net Loss %</th>
 
-                                <th class="px-3 py-2 text-left font-semibold">Issued Net Weight Diamond</th>
-                                <th class="px-3 py-2 text-left font-semibold">Received Quantity Diamond</th>
-                                <th class="px-3 py-2 text-left font-semibold">Loss Qty Diamond</th>
-                                <th class="px-3 py-2 text-left font-semibold">Diamond Loss %</th>
-                                <th class="px-3 py-2 text-left font-semibold">Received Pieces</th>
-                                <th class="px-3 py-2 text-left font-semibold">Loss Pieces</th>
+                                <th class="px-3 py-2 text-center font-semibold">Issued Net Weight Diamond</th>
+                                <th class="px-3 py-2 text-center font-semibold">Received Quantity Diamond</th>
+                                <th class="px-3 py-2 text-center font-semibold">Loss Qty Diamond</th>
+                                <th class="px-3 py-2 text-center font-semibold">Diamond Loss %</th>
+                                <th class="px-3 py-2 text-center font-semibold">Received Pieces</th>
+                                <th class="px-3 py-2 text-center font-semibold">Loss Pieces</th>
 
-                                <th class="px-3 py-2 text-left font-semibold">Gold Recovery Weight (gm)</th>
-                                <th class="px-3 py-2 text-left font-semibold">Gold Recovery Percentage</th>
+                                <th class="px-3 py-2 text-center font-semibold">Gold Recovery Weight (gm)</th>
+                                <th class="px-3 py-2 text-center font-semibold">Gold Recovery Percentage</th>
                             </tr>
                         </thead>
 
@@ -553,95 +537,95 @@
                             <template v-if="!showEmployeesTable" v-for="(dept, deptIndex) in selectedDepartmentData"
                                 :key="'dept-' + deptIndex">
                                 <!-- Department Total Row -->
-                                <tr class="bg-blue-50 font-bold border-b-8 border-b-gray-200 text-[11px] ">
+                                <tr class="text-[12px] ">
                                     <td class="px-3 py-2 text-center font-normal">{{ deptIndex + 1 }}</td>
-                                    <td class="px-3 py-2 text-center">{{ dept.name }}</td>
-                                    <td class="px-3 py-2 text-center bg-blue-100">{{ dept.bag_count || 0 }}</td>
+                                    <td class="px-3 py-2 font-semibold">
+                                        <a :href="getNsUrl('department', dept.id)" target="_blank" class="text-blue-600 hover:underline hover:text-blue-800">{{ dept.name }}</a>
+                                    </td>
+                                    <td class="px-3 py-2 text-center text-center bg-blue-50 font-semibold">{{ dept.bag_count || 0 }}</td>
                                     <!-- Hidden columns colspan removed -->
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryDeptTotals(dept).issuedNetWt) }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryDeptTotals(dept).recvG) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).lG) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ getSummaryDeptTotals(dept).grossLossPct }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryDeptTotals(dept).pw) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).pl) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).netLoss) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ getSummaryDeptTotals(dept).netLossPct }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryDeptTotals(dept).issuedNetWtDiamond) }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryDeptTotals(dept).aD) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).lD) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ getSummaryDeptTotals(dept).diamondLossPct }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryDeptTotals(dept).receivedPieces) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).lossPieces) }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo((() => { const pl = getSummaryDeptTotals(dept).pl; const pct = getDeptRecoveryPercentage(dept); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
-                                    <td class="px-3 py-2">{{ getDeptRecoveryPercentage(dept) > 0 ? roundToTwo(getDeptRecoveryPercentage(dept)) + '%' : '0%' }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryDeptTotals(dept).issuedNetWt) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryDeptTotals(dept).recvG) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).lG) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ getSummaryDeptTotals(dept).grossLossPct }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryDeptTotals(dept).pw) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).pl) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).netLoss) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ getSummaryDeptTotals(dept).netLossPct }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryDeptTotals(dept).issuedNetWtDiamond) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryDeptTotals(dept).aD) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).lD) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ getSummaryDeptTotals(dept).diamondLossPct }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryDeptTotals(dept).receivedPieces) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryDeptTotals(dept).lossPieces) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo((() => { const pl = getSummaryDeptTotals(dept).pl; const pct = getDeptRecoveryPercentage(dept); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ getDeptRecoveryPercentage(dept) > 0 ? roundToTwo(getDeptRecoveryPercentage(dept)) + '%' : '0%' }}</td>
                                 </tr>
                             </template>
 
                             <!-- Total Row for Departments -->
                             <tr v-if="!showEmployeesTable" class="bg-gray-100 font-bold border-t text-[11px]">
-                                <td class="px-3 py-2" colspan="2" style="text-align: center;">Total</td>
+                                <td class="px-3 py-2 text-center" colspan="2">Total</td>
 
                                 <!-- Total No. of Bags -->
                                 <td class="px-3 py-2 font-semibold text-center bg-blue-50">{{ totalDeptBagCount }}</td>
 
                                 <!-- Issued Net Weight -->
-                                <td class="px-3 py-2">{{ totalDeptIssuedNetWeightGold }}</td>
+                                <td class="px-3 py-2 text-center">{{ totalDeptIssuedNetWeightGold }}</td>
 
                                 <!-- Received Quantity -->
-                                <td class="px-3 py-2">{{ totalDeptReceivedQtyGold }}</td>
+                                <td class="px-3 py-2 text-center">{{ totalDeptReceivedQtyGold }}</td>
 
                                 <!-- Gross Loss -->
-                                <td class="px-3 py-2 text-red-500">{{ totalDeptLossQtyGold }}</td>
+                                <td class="px-3 py-2 text-center text-red-500">{{ totalDeptLossQtyGold }}</td>
 
                                 <!-- Gross Loss % -->
-                                <td class="px-3 py-2 text-red-500">{{ parseFloat(totalDeptReceivedQtyGold) > 0 ?
+                                <td class="px-3 py-2 text-center text-red-500">{{ parseFloat(totalDeptReceivedQtyGold) > 0 ?
                                     roundToTwo((parseFloat(totalDeptLossQtyGold) / parseFloat(totalDeptReceivedQtyGold))
                                     * 100) + '%' : '0.00%' }}
                                 </td>
 
                                 <!-- Pure Weight -->
-                                <td class="px-3 py-2">{{ totalDeptPureWeight }}</td>
+                                <td class="px-3 py-2 text-center">{{ totalDeptPureWeight }}</td>
 
                                 <!-- Pure Loss -->
-                                <td class="px-3 py-2 text-red-500">{{ totalDeptPureLoss }}</td>
+                                <td class="px-3 py-2 text-center text-red-500">{{ totalDeptPureLoss }}</td>
 
                                 <!-- Net Loss -->
-                                <td class="px-3 py-2 text-red-500">{{ parseFloat(totalDeptReceivedQtyGold) > 0 ?
-                                    roundToTwo(parseFloat(totalDeptLossQtyGold) / parseFloat(totalDeptReceivedQtyGold))
-                                    : '0.00' }}</td>
+                                <td class="px-3 py-2 text-center text-red-500">{{ totalDeptNetLossSum }}</td>
 
                                 <!-- Net Loss % -->
-                                <td class="px-3 py-2 text-red-500">{{ parseFloat(totalDeptReceivedQtyGold) > 0 ?
+                                <td class="px-3 py-2 text-center text-red-500">{{ parseFloat(totalDeptReceivedQtyGold) > 0 ?
                                     roundToTwo((parseFloat(totalDeptLossQtyGold) / parseFloat(totalDeptReceivedQtyGold))
                                     * 100) + '%' : '0.00%' }}
                                 </td>
 
                                 <!-- Issued Net Weight Diamond -->
-                                <td class="px-3 py-2">{{ totalDeptIssuedNetWeightDiamond }}</td>
+                                <td class="px-3 py-2 text-center">{{ totalDeptIssuedNetWeightDiamond }}</td>
 
                                 <!-- Received Quantity Diamond -->
-                                <td class="px-3 py-2">{{ totalDeptReceivedQtyDiamond }}</td>
+                                <td class="px-3 py-2 text-center">{{ totalDeptReceivedQtyDiamond }}</td>
 
                                 <!-- Loss Qty Diamond -->
-                                <td class="px-3 py-2 text-red-500">{{ totalDeptLossQtyDiamond }}</td>
+                                <td class="px-3 py-2 text-center text-red-500">{{ totalDeptLossQtyDiamond }}</td>
 
                                 <!-- Diamond Loss % -->
-                                <td class="px-3 py-2 text-red-500">{{ parseFloat(totalDeptReceivedQtyDiamond) > 0 ?
+                                <td class="px-3 py-2 text-center text-red-500">{{ parseFloat(totalDeptReceivedQtyDiamond) > 0 ?
                                     roundToTwo((parseFloat(totalDeptLossQtyDiamond) /
                                     parseFloat(totalDeptReceivedQtyDiamond)) * 100) + '%' :
                                     '0.00%' }}</td>
 
                                 <!-- Received Pieces Total -->
-                                <td class="px-3 py-2">{{ totalDeptReceivedPieces }}</td>
+                                <td class="px-3 py-2 text-center">{{ totalDeptReceivedPieces }}</td>
 
                                 <!-- Loss Pieces Total -->
-                                <td class="px-3 py-2 text-red-500">{{ totalDeptLossPieces }}</td>
+                                <td class="px-3 py-2 text-center text-red-500">{{ totalDeptLossPieces }}</td>
 
                                 <!-- Gold Recovery Weight -->
-                                <td class="px-3 py-2">{{ roundToTwo((() => { let totalRecoveryWt = 0; selectedDepartmentData.forEach(dept => { const pct = getDeptRecoveryPercentage(dept); const deptPl = parseFloat(dept.pure_loss_gold || 0); if (pct > 0 && deptPl > 0) totalRecoveryWt += deptPl * (pct / 100); }); return totalRecoveryWt; })()) }}</td>
+                                <td class="px-3 py-2 text-center">{{ roundToTwo((() => { let totalRecoveryWt = 0; selectedDepartmentData.forEach(dept => { const pct = getDeptRecoveryPercentage(dept); const deptPl = parseFloat(dept.pure_loss_gold || 0); if (pct > 0 && deptPl > 0) totalRecoveryWt += deptPl * (pct / 100); }); return totalRecoveryWt; })()) }}</td>
 
                                 <!-- Gold Recovery Percentage -->
-                                <td class="px-3 py-2">{{ (() => { let totalRecoveryWt = 0; selectedDepartmentData.forEach(dept => { const pct = getDeptRecoveryPercentage(dept); const deptPl = parseFloat(dept.pure_loss_gold || 0); if (pct > 0 && deptPl > 0) totalRecoveryWt += deptPl * (pct / 100); }); const pl = parseFloat(totalDeptPureLoss); return pl > 0 && totalRecoveryWt > 0 ? roundToTwo((totalRecoveryWt / pl) * 100) + '%' : '0%'; })() }}</td>
+                                <td class="px-3 py-2 text-center">{{ (() => { let totalRecoveryWt = 0; selectedDepartmentData.forEach(dept => { const pct = getDeptRecoveryPercentage(dept); const deptPl = parseFloat(dept.pure_loss_gold || 0); if (pct > 0 && deptPl > 0) totalRecoveryWt += deptPl * (pct / 100); }); const pl = parseFloat(totalDeptPureLoss); return pl > 0 && totalRecoveryWt > 0 ? roundToTwo((totalRecoveryWt / pl) * 100) + '%' : '0%'; })() }}</td>
                             </tr>
                         </tbody>
 
@@ -650,34 +634,128 @@
                             <template v-if="showEmployeesTable" v-for="(emp, empIndex) in selectedEmployees"
                                 :key="'emp-' + empIndex">
                                 <!-- Employee Total Row -->
-                                <tr
-                                    class="bg-blue-50 font-bold border-b-8 border-b-gray-200 border-blue-200 text-[11px]">
+                                <tr @click="toggleEmployeeView(emp.employee_id)"
+                                    :class="[
+                                        'font-semibold text-[11px] cursor-pointer transition-colors',
+                                        expandedEmployees.includes(emp.employee_id)
+                                            ? 'emp-row-expanded bg-blue-100 border-l-4 border-l-blue-400 border-t border-t-blue-300'
+                                            : 'border-blue-200 border-l-4 border-l-transparent hover:bg-blue-50'
+                                    ]">
                                     <td class="px-3 py-2 text-center font-normal">{{ empIndex + 1 }}</td>
-                                    <td class="px-3 py-2 text-center">{{ emp.name }}</td>
-                                    <td class="px-3 py-2 text-center bg-blue-100">{{ emp.bag_count || 0 }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).issuedNetWt) }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).recvG) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).lG) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).grossLossPct }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).pw) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).pl) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).netLoss) }}</td>
-                                    <td class="px-3 py-2 text-red-500">{{ getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).netLossPct }}</td>
+                                    <td class="px-3 py-2 text-center">
+                                        <span v-if="expandedEmployees.includes(emp.employee_id)" class="mr-1"><i class="fas fa-caret-down text-gray-600"></i></span>
+                                        <span v-else class="mr-1"><i class="fas fa-caret-right text-gray-600"></i></span>
+                                        {{ emp.name }}
+                                    </td>
+                                    <td class="px-3 py-2 text-center">{{ emp.bag_count || 0 }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).issuedNetWt) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).recvG) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).lG) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).grossLossPct }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).pw) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).pl) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).netLoss) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).netLossPct }}</td>
                                     <!-- Issued Net Weight Diamond -->
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).issuedNetWtDiamond) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).issuedNetWtDiamond) }}</td>
                                     <!-- Received Quantity Diamond -->
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).aD) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).aD) }}</td>
                                     <!-- Loss Qty Diamond -->
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).lD) }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).lD) }}</td>
                                     <!-- Diamond Loss % -->
-                                    <td class="px-3 py-2 text-red-500">{{ getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).diamondLossPct }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).diamondLossPct }}</td>
                                     <!-- Received Pieces -->
-                                    <td class="px-3 py-2">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).receivedPieces) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).receivedPieces) }}</td>
                                     <!-- Loss Pieces -->
-                                    <td class="px-3 py-2 text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).lossPieces) }}</td>
-                                    <td class="px-3 py-2">{{ roundToTwo((() => { const pl = getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).pl; const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); const pct = getEmpRecoveryPercentage(emp, dept || null); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
-                                    <td class="px-3 py-2">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); const pct = getEmpRecoveryPercentage(emp, dept || null); return pct > 0 ? roundToTwo(pct) + '%' : '0%'; })() }}</td>
+                                    <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).lossPieces) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ roundToTwo((() => { const pl = getSummaryEmpTotals(emp, selectedDepartmentData.find(d => d.name === expandedDepartment) || null).pl; const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); const pct = getEmpRecoveryPercentage(emp, dept || null); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
+                                    <td class="px-3 py-2 text-center">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); const pct = getEmpRecoveryPercentage(emp, dept || null); return pct > 0 ? roundToTwo(pct) + '%' : '0%'; })() }}</td>
                                 </tr>
+
+                                <!-- Bag Details Expansion -->
+                                <template v-if="expandedEmployees.includes(emp.employee_id)">
+                                    <tr class="border-l-4 border-l-blue-400" v-if="!emp.loadedBags">
+                                        <td colspan="19" class="p-4 text-center text-gray-900 bg-blue-50 border-l-4 border-l-blue-400 border-b-2 border-b-blue-300 italic">
+                                            Loading bag details...
+                                        </td>
+                                    </tr>
+                                    <tr class="border-l-4 border-l-blue-400" v-else-if="!emp.unique_categories_array || emp.unique_categories_array.length === 0">
+                                        <td colspan="19" class="p-4 text-center text-gray-500 bg-blue-50 border-l-4 border-l-blue-400 border-b-2 border-b-blue-300 italic">
+                                            No bag details found.
+                                        </td>
+                                    </tr>
+                                    <tr class="border-l-4 border-l-blue-400" v-else>
+                                        <td colspan="21" class="border-b-2 border-b-blue-300 bg-blue-100">
+                                            <div class="pb-2 rounded-xl shadow-inner overflow-x-auto">
+                                                <div class="rounded-xl overflow-hidden shadow-lg border border-gray-200 bg-white">
+                                                    <table class="w-full text-center text-[10px]">
+                                                        <thead class="bg-gray-200 text-gray-600">
+                                                            <tr>
+                                                                <th class="p-2 border-b">Category</th>
+                                                                <th class="p-2 border-b">Sub Category</th>
+                                                                <th class="p-2 border-b">Print Design</th>
+                                                                <th class="p-2 border-b">Bag Name</th>
+                                                                <th class="p-2 border-b">Issued Net Wt (G)</th>
+                                                                <th class="p-2 border-b">Recv Qty (G)</th>
+                                                                <th class="p-2 border-b">Gross Loss</th>
+                                                                <th class="p-2 border-b">Gross Loss %</th>
+                                                                <th class="p-2 border-b">Pure Wt</th>
+                                                                <th class="p-2 border-b">Pure Loss</th>
+                                                                <th class="p-2 border-b">Net Loss</th>
+                                                                <th class="p-2 border-b">Net Loss %</th>
+                                                                <th class="p-2 border-b">Issued Wt (D)</th>
+                                                                <th class="p-2 border-b">Recv Qty (D)</th>
+                                                                <th class="p-2 border-b">Loss Qty (D)</th>
+                                                                <th class="p-2 border-b">Diamond Loss %</th>
+                                                                <th class="p-2 border-b">Recv Pcs</th>
+                                                                <th class="p-2 border-b">Loss Pcs</th>
+                                                                <th class="p-2 border-b">Gold Recovery Weight (gm)</th>
+                                                                <th class="p-2 border-b">Gold Recovery Percentage</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <template v-for="category in emp.unique_categories_array" :key="category">
+                                                                <tr v-for="(bagName, index) in (emp.category_bag_names_map[category] || [])" :key="bagName" class="border-b bg-white hover:bg-gray-50">
+                                                                    <td v-if="index === 0" :rowspan="(emp.category_bag_names_map[category] || []).length" class="p-2 border-r border-gray-200 align-middle bg-white">
+                                                                        <a :href="getNsUrl('category', emp.category_bag_category_id_map[category]?.[bagName])" target="_blank" class="text-blue-600 hover:underline hover:text-blue-800">{{ category }}</a>
+                                                                    </td>
+                                                                    <td class="p-2">
+                                                                        <a v-if="emp.category_bag_sub_category_id_map?.[category]?.[bagName]" :href="getNsUrl('subcategory', emp.category_bag_sub_category_id_map[category][bagName])" target="_blank" class="text-blue-600 hover:underline hover:text-blue-800">{{ emp.category_bag_sub_category_map[category][bagName] }}</a>
+                                                                        <span v-else>{{ (emp.category_bag_sub_category_map && emp.category_bag_sub_category_map[category] && emp.category_bag_sub_category_map[category][bagName]) || '-' }}</span>
+                                                                    </td>
+                                                                    <td class="p-2">
+                                                                        <a v-if="emp.category_bag_print_design_id_map?.[category]?.[bagName]" :href="getNsUrl('printdesign', emp.category_bag_print_design_id_map[category][bagName])" target="_blank" class="text-blue-600 hover:underline hover:text-blue-800">{{ emp.category_bag_print_design_map[category][bagName] }}</a>
+                                                                        <span v-else>{{ (emp.category_bag_print_design_map && emp.category_bag_print_design_map[category] && emp.category_bag_print_design_map[category][bagName]) || '-' }}</span>
+                                                                    </td>
+                                                                    <td class="p-2">
+                                                                        <a v-if="emp.category_bag_ids_map?.[category]?.[bagName]" :href="getNsUrl('bag', emp.category_bag_ids_map[category][bagName])" target="_blank" class="text-blue-600 hover:underline hover:text-blue-800">{{ bagName }}</a>
+                                                                        <span v-else>{{ bagName }}</span>
+                                                                    </td>
+                                                                    <td class="p-2">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.issued_net_wt_gold || 0) }}</td>
+                                                                    <td class="p-2">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.received_qty_gold || 0) }}</td>
+                                                                    <td class="p-2 text-red-500">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.gross_loss_gold || 0) }}</td>
+                                                                    <td class="p-2 text-red-500">{{ (emp.category_bag_qty_map[`${category}_${bagName}`]?.received_qty_gold > 0) ? roundToTwo((emp.category_bag_qty_map[`${category}_${bagName}`].gross_loss_gold / emp.category_bag_qty_map[`${category}_${bagName}`].received_qty_gold) * 100) + '%' : '0.00%' }}</td>
+                                                                    <td class="p-2">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.pure_weight_gold || 0) }}</td>
+                                                                    <td class="p-2 text-red-500">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.pure_loss_gold || 0) }}</td>
+                                                                    <td class="p-2 text-red-500">{{ (emp.category_bag_qty_map[`${category}_${bagName}`]?.received_qty_gold > 0) ? roundToTwo((emp.category_bag_qty_map[`${category}_${bagName}`].gross_loss_gold / emp.category_bag_qty_map[`${category}_${bagName}`].received_qty_gold)) : '0.00' }}</td>
+                                                                    <td class="p-2 text-red-500">{{ (emp.category_bag_qty_map[`${category}_${bagName}`]?.received_qty_gold > 0) ? roundToTwo((emp.category_bag_qty_map[`${category}_${bagName}`].gross_loss_gold / emp.category_bag_qty_map[`${category}_${bagName}`].received_qty_gold) * 100) + '%' : '0.00%' }}</td>
+                                                                    <td class="p-2">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.issued_net_wt_diamond || 0) }}</td>
+                                                                    <td class="p-2">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.received_qty_diamond || 0) }}</td>
+                                                                    <td class="p-2 text-red-500">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.loss_qty_diamond || 0) }}</td>
+                                                                    <td class="p-2 text-red-500">{{ (emp.category_bag_qty_map[`${category}_${bagName}`]?.received_qty_diamond > 0) ? roundToTwo((emp.category_bag_qty_map[`${category}_${bagName}`].loss_qty_diamond / emp.category_bag_qty_map[`${category}_${bagName}`].received_qty_diamond) * 100) + '%' : '0.00%' }}</td>
+                                                                    <td class="p-2">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.received_pieces || 0) }}</td>
+                                                                    <td class="p-2 text-red-500">{{ roundToTwo(emp.category_bag_qty_map[`${category}_${bagName}`]?.loss_pieces || 0) }}</td>
+                                                                    <td class="p-2 text-red-500">{{ roundToTwo((() => { const pl = emp.category_bag_qty_map[`${category}_${bagName}`]?.pure_loss_gold || 0; const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); const pct = getEmpRecoveryPercentage(emp, dept || null); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
+                                                                    <td class="p-2 text-red-500">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); const pct = getEmpRecoveryPercentage(emp, dept || null); return pct > 0 ? roundToTwo(pct) + '%' : '0%'; })() }}</td>
+                                                                </tr>
+                                                            </template>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
                             </template>
 
                             <!-- Unassigned Bags Rows -->
@@ -708,79 +786,90 @@
                                 </tr>
                             </template>
 
-                            <!-- No data found row when selectedEmployees is empty -->
-                            <tr v-if="showEmployeesTable && selectedEmployees.length === 0"
+                            <!-- Loading spinner when fetching employee data -->
+                            <tr v-if="showEmployeesTable && loadingEmployeeData" class="text-gray-700 border-b">
+                                <td colspan="19" class="px-3 py-8">
+                                    <div class="flex flex-col items-center justify-center gap-3">
+                                        <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span class="text-gray-600 font-semibold">Loading employee data...</span>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- No data found row when selectedEmployees is empty and not loading -->
+                            <tr v-if="showEmployeesTable && selectedEmployees.length === 0 && !loadingEmployeeData"
                                 class="border-b group hover:bg-gray-50 transition-all duration-200 text-[11px]">
-                                <td colspan="17" style="text-align: center;" class="px-3 py-2 text-gray-900 italic">No
-                                    data found for this
-                                    Employee</td>
+                                <td colspan="17" style="text-align: center;" class="px-3 py-2 text-gray-900 italic">No employees found for this department on the selected date range.</td>
                             </tr>
 
                             <!-- Total Row for Employees -->
                             <tr v-if="showEmployeesTable" class="bg-gray-100 font-bold border-t text-[11px]">
-                                <td class="px-3 py-2" colspan="2" style="text-align: center;">Total</td>
+                                <td class="px-3 py-2 text-center" colspan="2">Total</td>
 
                                 <!-- Total No. of Bags -->
                                 <td class="px-3 py-2 font-semibold text-center bg-blue-50">{{ totalEmpBagCount }}</td>
 
                                 <!-- Issued Net Weight -->
-                                <td class="px-3 py-2">{{ roundToTwo(parseFloat(totalEmpIssuedNetWeightGold)) }}</td>
+                                <td class="px-3 py-2 text-center">{{ roundToTwo(parseFloat(totalEmpIssuedNetWeightGold)) }}</td>
 
                                 <!-- Received Quantity -->
-                                <td class="px-3 py-2">{{ roundToTwo(parseFloat(totalEmpReceivedQtyGold)) }}</td>
+                                <td class="px-3 py-2 text-center">{{ roundToTwo(parseFloat(totalEmpReceivedQtyGold)) }}</td>
 
                                 <!-- Gross Loss -->
-                                <td class="px-3 py-2 text-red-500">{{ roundToTwo(parseFloat(totalEmpLossQuantityGold)) }}</td>
+                                <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(parseFloat(totalEmpLossQuantityGold)) }}</td>
 
                                 <!-- Gross Loss % -->
-                                <td class="px-3 py-2 text-red-500">{{ parseFloat(totalEmpReceivedQtyGold) > 0 ?
+                                <td class="px-3 py-2 text-center text-red-500">{{ parseFloat(totalEmpReceivedQtyGold) > 0 ?
                                     roundToTwo((parseFloat(totalEmpLossQuantityGold) /
                                     parseFloat(totalEmpReceivedQtyGold)) * 100) + '%' :
                                     '0.00%' }}</td>
 
                                 <!-- Pure Weight -->
-                                <td class="px-3 py-2">{{ roundToTwo(parseFloat(totalEmpPureWeight)) }}</td>
+                                <td class="px-3 py-2 text-center">{{ roundToTwo(parseFloat(totalEmpPureWeight)) }}</td>
 
                                 <!-- Pure Loss -->
-                                <td class="px-3 py-2 text-red-500">{{ roundToTwo(parseFloat(totalEmpPureLoss)) }}</td>
+                                <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(parseFloat(totalEmpPureLoss)) }}</td>
 
                                 <!-- Net Loss -->
-                                <td class="px-3 py-2 text-red-500">{{ parseFloat(totalEmpReceivedQtyGold) > 0 ?
+                                <td class="px-3 py-2 text-center text-red-500">{{ parseFloat(totalEmpReceivedQtyGold) > 0 ?
                                     roundToTwo(parseFloat(totalEmpLossQuantityGold) /
                                     parseFloat(totalEmpReceivedQtyGold)) : '0.00' }}</td>
 
                                 <!-- Net Loss % -->
-                                <td class="px-3 py-2 text-red-500">{{ parseFloat(totalEmpReceivedQtyGold) > 0 ?
+                                <td class="px-3 py-2 text-center text-red-500">{{ parseFloat(totalEmpReceivedQtyGold) > 0 ?
                                     roundToTwo((parseFloat(totalEmpLossQuantityGold) /
                                     parseFloat(totalEmpReceivedQtyGold)) * 100) + '%' :
                                     '0.00%' }}</td>
 
                                 <!-- Issued Net Weight Diamond -->
-                                <td class="px-3 py-2">{{ roundToTwo(parseFloat(totalEmpIssuedNetWeightDiamond)) }}</td>
+                                <td class="px-3 py-2 text-center">{{ roundToTwo(parseFloat(totalEmpIssuedNetWeightDiamond)) }}</td>
 
                                 <!-- Received Quantity Diamond -->
-                                <td class="px-3 py-2">{{ roundToTwo(parseFloat(totalEmpReceivedQtyDiamond)) }}</td>
+                                <td class="px-3 py-2 text-center">{{ roundToTwo(parseFloat(totalEmpReceivedQtyDiamond)) }}</td>
 
                                 <!-- Loss Qty Diamond -->
-                                <td class="px-3 py-2 text-red-500">{{ roundToTwo(parseFloat(totalEmpLossQuantityDiamond)) }}</td>
+                                <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(parseFloat(totalEmpLossQuantityDiamond)) }}</td>
 
                                 <!-- Diamond Loss % -->
-                                <td class="px-3 py-2 text-red-500">{{ parseFloat(totalEmpReceivedQtyDiamond) > 0 ?
+                                <td class="px-3 py-2 text-center text-red-500">{{ parseFloat(totalEmpReceivedQtyDiamond) > 0 ?
                                     roundToTwo((parseFloat(totalEmpLossQuantityDiamond) /
                                     parseFloat(totalEmpReceivedQtyDiamond)) * 100) + '%' :
                                     '0.00%' }}</td>
 
                                 <!-- Received Pieces Total -->
-                                <td class="px-3 py-2">{{ roundToTwo(parseFloat(totalEmpReceivedPieces)) }}</td>
+                                <td class="px-3 py-2 text-center">{{ roundToTwo(parseFloat(totalEmpReceivedPieces)) }}</td>
 
                                 <!-- Loss Pieces Total -->
-                                <td class="px-3 py-2 text-red-500">{{ roundToTwo(parseFloat(totalEmpLossPieces)) }}</td>
+                                <td class="px-3 py-2 text-center text-red-500">{{ roundToTwo(parseFloat(totalEmpLossPieces)) }}</td>
 
                                 <!-- Gold Recovery Weight -->
-                                <td class="px-3 py-2">{{ roundToTwo((() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); if (!dept) return 0; const pct = getEmpRecoveryPercentage(selectedEmployees[0], dept); const pl = parseFloat(totalEmpPureLoss); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
+                                <td class="px-3 py-2 text-center">{{ roundToTwo((() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); if (!dept) return 0; const pct = getEmpRecoveryPercentage(selectedEmployees[0], dept); const pl = parseFloat(totalEmpPureLoss); return pl > 0 && pct > 0 ? pl * (pct / 100) : 0; })()) }}</td>
 
                                 <!-- Gold Recovery Percentage -->
-                                <td class="px-3 py-2">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); if (!dept) return '0%'; const selectedEmp = selectedEmployees && selectedEmployees.length > 0 ? selectedEmployees[0] : null; const pct = selectedEmp ? getEmpRecoveryPercentage(selectedEmp, dept) : 0; return pct > 0 ? roundToTwo(pct) + '%' : '0%'; })() }}</td>
+                                <td class="px-3 py-2 text-center">{{ (() => { const dept = selectedDepartmentData.find(d => d.name === expandedDepartment); if (!dept) return '0%'; const selectedEmp = selectedEmployees && selectedEmployees.length > 0 ? selectedEmployees[0] : null; const pct = selectedEmp ? getEmpRecoveryPercentage(selectedEmp, dept) : 0; return pct > 0 ? roundToTwo(pct) + '%' : '0%'; })() }}</td>
                             </tr>
                         </tbody>
 
@@ -845,6 +934,7 @@ export default {
         const selectedDepartmentData = ref([]);
         const showEmployeesTable = ref(false);
         const showNoDataMessage = ref(false); // Show message if no data is available after retries
+        const loadingEmployeeData = ref(false); // Track employee data loading state
         const decimalPlaces = ref(2); // Decimal places for rounding (2, 3, or 4)
 
         let cryptoChart = null;
@@ -859,7 +949,8 @@ export default {
             fetchListEfficiencyAnalysis,
             fetchInventoryAdjustments,
             listInventoryAdjustments,
-            fetchRecoveryDataBatch
+            fetchRecoveryDataBatch,
+            exportEfficiencyExcel
         } = useAllEfficiencyAnalysisApi();
 
         const to = ref(false); // ✅ Controls the visibility of the popup
@@ -961,9 +1052,8 @@ export default {
                     const result = deptMap[idStr];
                     return result;
                 }
-            } else {
-                console.warn(`[getEmpRecoveryPercentage] emp.id is undefined or null`);
             }
+            // Note: emp.id may be undefined in summary data, which is normal
 
             // 3. Case-insensitive name match
             const empNameLower = (emp.name || '').trim().toLowerCase();
@@ -1048,6 +1138,17 @@ export default {
                 sum += getDepartmentStartingQtyGoldRaw(dept);
             });
             return roundToTwo(sum);
+        });
+
+        const totalDeptBagCount = computed(() => {
+            // Get the location bag count from the current expanded location
+            if (expandedLocation.value) {
+                const selectedLocation = locations.value.find(loc => loc.internalid.value === expandedLocation.value);
+                if (selectedLocation) {
+                    return selectedLocation.location_bag_count || 0;
+                }
+            }
+            return 0;
         });
 
         const totalDeptIssuedNetWeightDiamond = computed(() => {
@@ -1150,28 +1251,6 @@ export default {
             return roundToTwo(sum);
         });
 
-        const totalDeptBagCount = computed(() => {
-            // Distinct bag count across all departments shown in the table,
-            // same dedup logic as getLocationTotalBagCount (a bag shared by
-            // multiple departments is only counted once in the grand total)
-            const uniqueBags = new Set();
-            selectedDepartmentData.value.forEach(dept => {
-                if (dept.unique_bags_array && Array.isArray(dept.unique_bags_array)) {
-                    dept.unique_bags_array.forEach(bag => uniqueBags.add(bag));
-                }
-            });
-            if (uniqueBags.size === 0) {
-                // Fallback: sum dept.bag_count (less accurate, but works if
-                // unique_bags_array isn't available)
-                let sum = 0;
-                selectedDepartmentData.value.forEach(dept => {
-                    sum += parseInt(dept.bag_count || 0);
-                });
-                return sum;
-            }
-            return uniqueBags.size;
-        });
-
         const totalDeptIssuedQtyGold = computed(() => {
             let sum = 0;
             selectedDepartmentData.value.forEach(dept => {
@@ -1213,9 +1292,9 @@ export default {
         const totalDeptReceivedQtyGold = computed(() => {
             let sum = 0;
             selectedDepartmentData.value.forEach(dept => {
-                sum += dept.received_qty_gold !== undefined
-                    ? parseFloat(dept.received_qty_gold || 0)
-                    : getDeptColumnSum(dept, 'recvG');
+                // Sum the totals from each department (which includes wax_tree overrides)
+                const deptTotals = getSummaryDeptTotals(dept);
+                sum += deptTotals.recvG;
             });
             return roundToTwo(sum);
         });
@@ -1224,9 +1303,9 @@ export default {
         const totalDeptIssuedNetWeightGold = computed(() => {
             let sum = 0;
             selectedDepartmentData.value.forEach(dept => {
-                sum += dept.issued_net_wt_gold !== undefined
-                    ? parseFloat(dept.issued_net_wt_gold || 0)
-                    : getDeptColumnSum(dept, 'issuedNetWt');
+                // Sum the totals from each department (which includes wax_tree overrides)
+                const deptTotals = getSummaryDeptTotals(dept);
+                sum += deptTotals.issuedNetWt;
             });
             return roundToTwo(sum);
         });
@@ -1453,6 +1532,15 @@ export default {
             return roundToTwo(sum);
         });
 
+        const totalDeptNetLossSum = computed(() => {
+            let sum = 0;
+            selectedDepartmentData.value.forEach(dept => {
+                const totals = getSummaryDeptTotals(dept);
+                sum += parseFloat(totals.netLoss) || 0;
+            });
+            return roundToTwo(sum);
+        });
+
         const totalEmpPureWeight = computed(() => {
             return selectedDeptObject.value
                 ? roundToTwo(getSummaryDeptTotals(selectedDeptObject.value).pw)
@@ -1667,6 +1755,38 @@ export default {
 
         // ─── Main export function (replaces the stub) ────────────────────────────────
         const downloadData = async () => {
+            try {
+                if (!expandedLocation.value) {
+                    alert('No data to export. Please select a location first!');
+                    return;
+                }
+                if (!selectedDateRange.value || selectedDateRange.value.length < 2) {
+                    alert('Please select a date range first!');
+                    return;
+                }
+                const startDate = formatDate(selectedDateRange.value[0]);
+                const endDate = formatDate(selectedDateRange.value[1]);
+                const isRepairOnly = props.type === 'repair' ? true : props.type === 'production' ? false : null;
+                const isEmployeeExport = showEmployeesTable.value;
+                
+                // Determine export context
+                let exportLevel = isEmployeeExport ? 'employee' : 'department';
+                
+                const payload = {
+                    location: expandedLocation.value,
+                    startDate: startDate,
+                    endDate: endDate,
+                    isRepairOnly: isRepairOnly,
+                    exportLevel: exportLevel
+                };
+                await exportEfficiencyExcel(payload);
+                alert('The excel file will be emailed to you.');
+                return; // Return early
+            } catch (err) {
+                console.error('Excel export failed:', err);
+                alert(`Export failed: ${err.message}`);
+                return;
+            }
             try {
                 // Guard: need ExcelJS
                 if (typeof ExcelJS === 'undefined') {
@@ -2233,7 +2353,7 @@ export default {
                     const gR = currentRow;
 
                     // Pull totals from the correct computed set
-                    const bagCount = isEmpView ? totalEmpBagCount.value : totalDeptBagCount.value;
+                    const bagCount = isEmpView ? totalEmpBagCount.value : '';
                     const issuedNWG = isEmpView ? parseFloat(totalEmpIssuedNetWeightGold.value) : parseFloat(totalDeptIssuedNetWeightGold.value);
                     const recvG = isEmpView ? parseFloat(totalEmpReceivedQtyGold.value) : parseFloat(totalDeptReceivedQtyGold.value);
                     const lossG = isEmpView ? parseFloat(totalEmpLossQuantityGold.value) : parseFloat(totalDeptLossQtyGold.value);
@@ -2245,6 +2365,17 @@ export default {
                     const recvPieces = isEmpView ? parseFloat(totalEmpReceivedPieces.value) : parseFloat(totalDeptReceivedPieces.value);
                     const lossPieces = isEmpView ? parseFloat(totalEmpLossPieces.value) : parseFloat(totalDeptLossPieces.value);
                     const recoveryWt = isEmpView ? parseFloat(totalEmpGoldRecoveryWeight.value) : parseFloat(totalDeptGoldRecoveryWeight.value);
+
+                    // ✅ Calculate Net Loss grand total by summing all entity rows' net loss values (column 16)
+                    // Net Loss = Gross Loss / Received Qty for EACH department, then sum those values
+                    let netLossGrandTotal = 0;
+                    selectedDepartmentData.value.forEach(dept => {
+                        const deptTotals = getSummaryDeptTotals(dept);
+                        const deptRecvG = parseFloat(deptTotals.recvG) || 0;
+                        const deptLossG = parseFloat(deptTotals.lG) || 0;
+                        const deptNetLoss = deptRecvG > 0 ? deptLossG / deptRecvG : 0;
+                        netLossGrandTotal += deptNetLoss;
+                    });
 
                     const grandLabel = ws.getCell(gR, 1);
                     grandLabel.value = 'Grand Total';
@@ -2275,7 +2406,7 @@ export default {
                         [13, '', false],
                         [14, roundToTwo(pureWt), false],
                         [15, roundToTwo(pureLoss), true],
-                        [16, recvG > 0 ? roundToTwo((lossG / recvG)) : 0, true],
+                        [16, roundToTwo(netLossGrandTotal), true],
                         [17, recvG > 0 ? roundToTwo((lossG / recvG * 100)) + '%' : '0%', true],
                         [18, roundToTwo(issuedNWD), false],
                         [19, roundToTwo(recvD), false],
@@ -2366,26 +2497,6 @@ export default {
                     : getDepartmentTotalActualProductionDiamond(dept);
             });
             return roundToTwo(sum);
-        };
-
-        // Helper function to get total unique bags for a location
-        const getLocationTotalBagCount = (location) => {
-            if (!location.departments || location.departments.length === 0) return 0;
-            const uniqueBags = new Set();
-            location.departments.forEach(dept => {
-                if (dept.unique_bags_array && Array.isArray(dept.unique_bags_array)) {
-                    dept.unique_bags_array.forEach(bag => uniqueBags.add(bag));
-                }
-            });
-            // If no unique_bags_array, fallback to summing bag_count
-            if (uniqueBags.size === 0) {
-                let sum = 0;
-                location.departments.forEach(dept => {
-                    sum += parseInt(dept.bag_count || 0);
-                });
-                return sum;
-            }
-            return uniqueBags.size;
         };
 
         // Helper function to get total issued quantity gold for a location
@@ -2789,6 +2900,19 @@ export default {
                 return parseFloat(dept.recovery_weight_gold || 0);
             }
 
+            // ✅ Special department overrides for Casting, Tree Cutting, Grinding
+            // These departments have pre-computed values from the wax_tree table
+            const deptId = Number(dept?.id);
+            if (deptId === CASTING || deptId === TREE_CUTTING_CLEANING || deptId === GRINDING) {
+                // For these special departments, return the wax_tree overrides if available
+                if (columnKey === 'issuedNetWt' && dept.wax_tree_actual_production_gold !== undefined) {
+                    return parseFloat(dept.wax_tree_actual_production_gold || 0);
+                }
+                if (columnKey === 'recvG' && dept.wax_tree_received_qty_gold !== undefined) {
+                    return parseFloat(dept.wax_tree_received_qty_gold || 0);
+                }
+            }
+
             let sum = 0;
             (dept.unique_categories_array || []).forEach(cat => {
                 (dept.category_bag_names_map?.[cat] || []).forEach(bagName => {
@@ -3051,7 +3175,22 @@ export default {
                 // Fall back to per-bag calculation if summary fields not available
                 return getDeptTotals(dept);
             }
-            const recvG  = parseFloat(dept.received_qty_gold  || 0);
+            
+            // ✅ Apply special department overrides for Casting, Tree Cutting, Grinding
+            const deptId = Number(dept?.id);
+            let recvG  = parseFloat(dept.received_qty_gold  || 0);
+            let issuedNetWt = parseFloat(dept.issued_net_wt_gold || 0);
+            
+            if (deptId === CASTING || deptId === TREE_CUTTING_CLEANING || deptId === GRINDING) {
+                // Use wax_tree overrides if available
+                if (dept.wax_tree_actual_production_gold !== undefined) {
+                    issuedNetWt = parseFloat(dept.wax_tree_actual_production_gold || 0);
+                }
+                if (dept.wax_tree_received_qty_gold !== undefined) {
+                    recvG = parseFloat(dept.wax_tree_received_qty_gold || 0);
+                }
+            }
+            
             const lG     = parseFloat(dept.gross_loss_gold     || 0);
             const recvD  = parseFloat(dept.received_qty_diamond || 0);
             const lD     = parseFloat(dept.loss_qty_diamond    || 0);
@@ -3060,7 +3199,7 @@ export default {
             const netL   = parseFloat(dept.net_loss_gold       || 0);
             const recoveryWt = getDeptColumnSum(dept, 'recoveryWt'); // still computed in FE (needs recovery %)
             return {
-                issuedNetWt:        parseFloat(dept.issued_net_wt_gold      || 0),
+                issuedNetWt,
                 recvG,
                 lG,
                 grossLossPct:       recvG > 0 ? roundToTwo((lG / recvG) * 100) + '%' : '0.00%',
@@ -3679,6 +3818,7 @@ export default {
                             internalid: { value: locId },
                             name: { value: locData.location_name },
                             total_unique_bags: locData.total_unique_bags,
+                            location_bag_count: locData.location_bag_count || 0,
                             departments: Object.entries(locData.departments || {}).map(([deptId, dept]) => {
                                 // Build category_bag_qty_map from employees' categories
                                 const categoryBagQtyMap = dept.category_bag_qty_map || {};
@@ -3823,6 +3963,8 @@ export default {
                         if (locData) {
                             const targetLoc = locations.value.find(loc => loc.internalid.value == locationId);
                             if (targetLoc) {
+                                // Update location-level bag count
+                                targetLoc.location_bag_count = locData.location_bag_count || 0;
                                 targetLoc.departments = Object.entries(locData.departments || {}).map(([deptId, dept]) => {
                                     const categoryQtyMapByEmp = {};
                                     const employees = (dept.employees_array || []).map(emp => {
@@ -4112,32 +4254,181 @@ export default {
 
 
         // Function to toggle department view and fetch employee data
-        const toggleDepartmentView = (deptName) => {
+        const toggleDepartmentView = async (deptName) => {
             if (expandedDepartment.value === deptName) {
                 expandedDepartment.value = null;
                 showEmployees.value = false;
                 showEmployeesTable.value = false;
+                selectedEmployees.value = []; // Clear employees when collapsing
+                loadingEmployeeData.value = false;
                 dashboardTitle.value = "Department Details";
 
             } else {
                 expandedDepartment.value = deptName;
                 showEmployees.value = true;
                 showEmployeesTable.value = true;
-                dashboardTitle.value = "Employee Details";
+                selectedEmployees.value = []; // Clear old employee data immediately
+                loadingEmployeeData.value = true; // Start loading
+                dashboardTitle.value = "Employee Details - Loading...";
 
                 // Get employees from the already-populated selectedDepartments
                 const selectedDept = selectedDepartments.value.find(dept => dept.name === deptName);
 
-                // Add department ID to each employee
-                selectedEmployees.value = (selectedDept?.employees || []).map(emp => {
-                    return {
-                        ...emp,
-                        departmentId: selectedDept.id
-                    };
-                });
+                // --- LAZY LOAD EMPLOYEES ---
+                try {
+                    if (!selectedDept.loadedEmployees) {
+                        const formattedStartDate = formatDate(selectedDateRange.value[0]);
+                        const formattedEndDate = formatDate(selectedDateRange.value[1]);
+                        const isRepairOnly = props.type === 'repair' ? true : props.type === 'production' ? false : null;
+                        
+                        const newDeptData = await fetchListEfficiencyAnalysis(expandedLocation.value, formattedStartDate, formattedEndDate, isRepairOnly, selectedDept.id, null, true);
+                        
+                        if (newDeptData && newDeptData[expandedLocation.value] && newDeptData[expandedLocation.value].departments && newDeptData[expandedLocation.value].departments[selectedDept.id]) {
+                            const fetchedDept = newDeptData[expandedLocation.value].departments[selectedDept.id];
+                            // employees are returned in employees_array, we need to map them like initial load does
+                            selectedDept.employees = (fetchedDept.employees_array || []).map(emp => {
+                                return {
+                                    ...emp,
+                                    departmentId: selectedDept.id,
+                                    loadedBags: false
+                                };
+                            });
+                            selectedDept.loadedEmployees = true;
+                        } else {
+                            selectedDept.employees = [];
+                            selectedDept.loadedEmployees = true;
+                        }
+                    }
 
+                    // Add department ID to each employee
+                    selectedEmployees.value = (selectedDept?.employees || []).map(emp => {
+                        return {
+                            ...emp,
+                            departmentId: selectedDept.id
+                        };
+                    });
+
+                    // Update title after loading
+                    dashboardTitle.value = "Employee Details";
+                } finally {
+                    loadingEmployeeData.value = false; // Stop loading
+                }
             }
             updateCharts();
+        };
+
+        const expandedEmployees = ref([]);
+
+        const loadEmployeeBags = async (empId) => {
+            const selectedDept = selectedDepartments.value.find(dept => dept.name === expandedDepartment.value);
+            const emp = selectedEmployees.value.find(e => e.employee_id === empId);
+            
+            if (emp && !emp.loadedBags) {
+                const formattedStartDate = formatDate(selectedDateRange.value[0]);
+                const formattedEndDate = formatDate(selectedDateRange.value[1]);
+                const isRepairOnly = props.type === 'repair' ? true : props.type === 'production' ? false : null;
+                
+                const newEmpData = await fetchListEfficiencyAnalysis(expandedLocation.value, formattedStartDate, formattedEndDate, isRepairOnly, selectedDept.id, empId, true);
+                
+                // buildEfficiencyData stores employees in employees_array (not employees map)
+                // Location/dept IDs may come back as numbers, so compare as strings
+                const locKey = Object.keys(newEmpData || {}).find(k => String(k) === String(expandedLocation.value));
+                const deptKey = locKey && Object.keys(newEmpData[locKey].departments || {}).find(k => String(k) === String(selectedDept.id));
+                const fetchedEmpObj = deptKey && (newEmpData[locKey].departments[deptKey].employees_array || []).find(e => String(e.employee_id) === String(empId));
+                
+                if (fetchedEmpObj) {
+                    const fetchedEmp = fetchedEmpObj;
+                    
+                    // Merge categorical mappings
+                    emp.category_qty_map = fetchedEmp.category_qty_map || {};
+                    
+                    const bagQtyMap = {};
+                    if (fetchedEmp.categories && Array.isArray(fetchedEmp.categories)) {
+                        fetchedEmp.categories.forEach(catItem => {
+                            const key = `${catItem.category_name}_${catItem.bag_name}`;
+                            const purityFactor = (catItem.metal_purity_percent || 0) / 100;
+                            
+                            // Gold computed
+                            const sG  = parseFloat(catItem.starting_qty_gold || 0);
+                            const iG  = parseFloat(catItem.issued_qty_gold || 0);
+                            const lG  = parseFloat(catItem.loss_qty_gold || 0);
+                            const scG = parseFloat(catItem.scrap_qty_gold || 0);
+                            const bG  = parseFloat(catItem.balance_qty_gold || 0);
+                            const issuedNetWtG = sG + iG - scG - bG;
+                            const recvG = sG + iG - lG - scG - bG;
+                            const pureWtG = recvG * purityFactor;
+                            const pureLossG = lG * purityFactor;
+                            
+                            catItem.issued_net_wt_gold = Math.abs(issuedNetWtG);
+                            catItem.received_qty_gold = recvG;
+                            catItem.gross_loss_gold = lG;
+                            catItem.pure_weight_gold = Math.abs(pureWtG);
+                            catItem.pure_loss_gold = pureLossG;
+                            catItem.net_loss_gold = lG - pureLossG;
+
+                            // Diamond computed
+                            const sD  = parseFloat(catItem.starting_qty_diamond || 0);
+                            const iD  = parseFloat(catItem.issued_qty_diamond || 0);
+                            const lD  = parseFloat(catItem.loss_qty_diamond || 0);
+                            const scD = parseFloat(catItem.scrap_qty_diamond || 0);
+                            const bD  = parseFloat(catItem.balance_qty_diamond || 0);
+                            const issuedNetWtD = sD + iD - scD - bD;
+                            const recvD = sD + iD - lD - scD - bD;
+                            
+                            catItem.issued_net_wt_diamond = Math.abs(issuedNetWtD);
+                            catItem.received_qty_diamond = recvD;
+                            catItem.loss_qty_diamond = lD;
+
+                            // Pieces computed
+                            const sP  = parseFloat(catItem.starting_pieces_info || 0);
+                            const iP  = parseFloat(catItem.issued_pieces_info || 0);
+                            const scP = parseFloat(catItem.scrap_pieces_info || 0);
+                            const bP  = parseFloat(catItem.balance_pieces_info || 0);
+                            const lP  = parseFloat(catItem.loss_pieces_info || 0);
+                            
+                            catItem.received_pieces = sP + iP - scP - bP;
+                            catItem.loss_pieces = lP;
+
+                            bagQtyMap[key] = catItem;
+                        });
+                    }
+                    emp.category_bag_qty_map = bagQtyMap;
+                    emp.unique_categories_array = fetchedEmp.unique_categories_array || [];
+                    emp.category_bag_names_map = fetchedEmp.category_bag_names_map || {};
+                    emp.categories = fetchedEmp.categories || [];
+                    emp.category_bag_sub_category_map = fetchedEmp.category_bag_sub_category_map || {};
+                    emp.category_bag_count_map = fetchedEmp.category_bag_count_map || {};
+                    emp.category_bag_print_design_map = fetchedEmp.category_bag_print_design_map || {};
+                    emp.category_bag_ids_map = fetchedEmp.category_bag_ids_map || {};
+                    emp.category_bag_category_id_map = fetchedEmp.category_bag_category_id_map || {};
+                    emp.category_bag_sub_category_id_map = fetchedEmp.category_bag_sub_category_id_map || {};
+                    emp.category_bag_print_design_id_map = fetchedEmp.category_bag_print_design_id_map || {};
+                    
+                    emp.loadedBags = true;
+                }
+            }
+        };
+
+        const toggleEmployeeView = async (empId) => {
+            const index = expandedEmployees.value.indexOf(empId);
+            if (index !== -1) {
+                expandedEmployees.value.splice(index, 1);
+            } else {
+                expandedEmployees.value.push(empId);
+                await loadEmployeeBags(empId);
+            }
+        };
+
+        const toggleExpandAllEmployees = async () => {
+            if (expandedEmployees.value.length === selectedEmployees.value.length) {
+                expandedEmployees.value = [];
+            } else {
+                const unexpandedIds = selectedEmployees.value
+                    .map(e => e.employee_id)
+                    .filter(id => !expandedEmployees.value.includes(id));
+                expandedEmployees.value.push(...unexpandedIds);
+                await Promise.all(unexpandedIds.map(id => loadEmployeeBags(id)));
+            }
         };
 
         const updateCharts = () => {
@@ -4292,9 +4583,26 @@ export default {
 
 
 
+        const getNsUrl = (type, id) => {
+            if (!id) return '#';
+            const base = (ENV_VAR.NS_API.BASE_DOMAIN || '').replace('.extforms.', '.app.');
+            switch (type) {
+                case 'employee': return `${base}/app/common/entity/employee.nl?id=${id}`;
+                case 'department': return `${base}/app/common/custom/custrecordentry.nl?rectype=1011&id=${id}`;
+                case 'category': return `${base}/app/common/custom/custrecordentry.nl?rectype=1007&id=${id}`;
+                case 'subcategory': return `${base}/app/common/custom/custrecordentry.nl?rectype=1020&id=${id}`;
+                case 'printdesign': return `${base}/app/common/item/item.nl?id=${id}`;
+                case 'bag': return `${base}/app/common/custom/custrecordentry.nl?rectype=1026&id=${id}`;
+                default: return '#';
+            }
+        };
+
         return {
+            getNsUrl,
             expandedLocation,
             expandedDepartment,
+            expandedEmployees,
+            toggleExpandAllEmployees,
             showDepartments,
             showEmployees,
             loading,
@@ -4304,9 +4612,11 @@ export default {
             selectedEmployees,
             toggleLocationView,
             toggleDepartmentView,
+            toggleEmployeeView,
             showTable,
             selectedDepartmentData,
             showEmployeesTable,
+            loadingEmployeeData,
             selectedDateRange,
             isInitialLoading,
             showNoDataPopup,
@@ -4318,7 +4628,6 @@ export default {
             roundToTwo,
             roundToTwoAlways,
             decimalPlaces,
-            getLocationTotalBagCount,
             getLocationTotalActualProductionGold,
             getLocationTotalActualProductionDiamond,
             getLocationTotalIssuedQtyGold,
@@ -4388,7 +4697,6 @@ export default {
             totalDeptNetLossGold,
             totalDeptTmProductionGold,
             totalDeptTmProductionDiamond,
-            totalDeptBagCount,
             totalDeptStartingQuantityGold,
             totalDeptIssuedNetWeightDiamond,
             totalDeptIssuedQtyGold,
@@ -4396,6 +4704,7 @@ export default {
             totalDeptScrapQtyGold,
             totalDeptReceivedQtyGold,
             totalDeptIssuedNetWeightGold,
+            totalDeptBagCount,
             totalDeptIssuedQtyDiamond,
             totalDeptLossQtyDiamond,
             totalDeptReceivedPieces,
@@ -4424,6 +4733,7 @@ export default {
             totalEmpReceivedQtyDiamond,
             totalDeptPureWeight,
             totalDeptPureLoss,
+            totalDeptNetLossSum,
             totalEmpPureWeight,
             totalEmpPureLoss,
             showNoDataMessage,
@@ -4609,7 +4919,6 @@ th,
 td {
     padding: 6px 8px;
     /* Reduced padding */
-    text-align: left;
     border: 1px solid #E5E7EB;
 }
 
@@ -4622,6 +4931,10 @@ th {
 
 tr:hover {
     background-color: #F9FAFB;
+}
+
+tr.emp-row-expanded:hover {
+    background-color: #DBEAFE !important; /* bg-blue-100 — locks hover to the same blue, no visible change */
 }
 </style>
 
@@ -4649,4 +4962,4 @@ tr:hover {
         grid-template-columns: repeat(1, minmax(100px, 1fr)) !important;
     }
 }
-</style>
+</style>4

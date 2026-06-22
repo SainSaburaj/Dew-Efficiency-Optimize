@@ -118,7 +118,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     }
 
                     const startTime = Date.now();
-                    const govBeforeQuery = runtime.getCurrentScript().getRemainingUsage();
+                    let govBeforeQuery = 0;  // Declare at top so it's accessible in catch block
+                    govBeforeQuery = runtime.getCurrentScript().getRemainingUsage();
 
                     // log.debug('runQuery - Starting: ' + queryName, { 
                     //     queryLength: sqlQuery.length,
@@ -907,10 +908,12 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             // Per record: if a date matches the UI range, take its corresponding weight; otherwise 0.
                             if (includeWaxTree)
                             {
+                                let waxTreeQueryStartTime = 0;
+                                let waxTreeQueryGovBefore = 0;  // Declare outside try for catch block access
                                 try
                                 {
-                                    const waxTreeQueryStartTime = Date.now();
-                                    const waxTreeQueryGovBefore = runtime.getCurrentScript().getRemainingUsage();
+                                    waxTreeQueryStartTime = Date.now();
+                                    waxTreeQueryGovBefore = runtime.getCurrentScript().getRemainingUsage();
                                     
                                     // log.debug(logPrefix + ' - Wax Tree Query Starting', {
                                     //     governance_before: waxTreeQueryGovBefore,
@@ -918,23 +921,114 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     // });
                                     
                                     let waxTreeQuery = `
-                                        SELECT
-                                            SUM(CASE WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_final_tree_weight, 0) ELSE 0 END) AS casting_qty,
-                                            SUM(CASE WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_casting_loss, 0) ELSE 0 END) AS casting_loss,
-                                            SUM(CASE WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_metal_issue_weight, 0) ELSE 0 END) AS casting_received_qty,
-                                            SUM(CASE WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_received_yield_weight, 0) ELSE 0 END) AS tree_cutting_qty,
-                                            SUM(CASE WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_cutting_loss_weight, 0) ELSE 0 END) AS tree_cutting_loss,
-                                            SUM(CASE WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_final_tree_weight - custrecord_jj_tree_weight - custrecord_jj_bag_components_wt, 0) ELSE 0 END) AS tree_cutting_received_qty,
-                                            SUM(CASE WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_received_weight, 0) ELSE 0 END) AS grinding_qty,
-                                            SUM(CASE WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_loss_weight, 0) ELSE 0 END) AS grinding_loss,
-                                            SUM(CASE WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD') THEN NVL(custrecord_jj_received_yield_weight - custrecord_jj_bag_components_wt, 0) ELSE 0 END) AS grinding_received_qty
-                                        FROM customrecord_jj_wax_tree
-                                        WHERE isinactive = 'F'
-                                          AND (
-                                                (custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD'))
-                                             OR (custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD'))
-                                             OR (custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD') AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD'))
-                                              )
+                                    SELECT
+                                        SUM(
+                                            CASE
+                                                WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                                AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                                THEN NVL(custrecord_jj_metal_issue_weight, 0)
+                                                ELSE 0
+                                            END
+                                        ) AS Casting_Issued_Net_Weight_Gold,
+                                    
+                                        SUM(
+                                            CASE
+                                                WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                                AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                                THEN NVL(custrecord_jj_casting_loss, 0)
+                                                ELSE 0
+                                            END
+                                        ) AS Casting_Loss_Gold,
+                                    
+                                        SUM(
+                                            CASE
+                                                WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                                AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                                THEN NVL(custrecord_jj_metal_issue_weight, 0)
+                                                    - NVL(custrecord_jj_casting_loss, 0)
+                                                ELSE 0
+                                            END
+                                        ) AS Casting_Received_Quantity_Gold,
+                                    
+                                        SUM(
+                                            CASE
+                                                WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                                AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                                THEN NVL(custrecord_jj_final_tree_weight, 0)
+                                                    - NVL(custrecord_jj_tree_weight, 0)
+                                                    - NVL(custrecord_jj_bag_components_wt, 0)
+                                                ELSE 0
+                                            END
+                                        ) AS Tree_Cutting_Cleaning_Issued_Net_Weight_Gold,
+                                    
+                                        SUM(
+                                            CASE
+                                                WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                                AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                                THEN NVL(custrecord_jj_cutting_loss_weight, 0)
+                                                ELSE 0
+                                            END
+                                        ) AS Tree_Cutting_Loss_Gold,
+                                    
+                                        SUM(
+                                            CASE
+                                                WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                                AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                                THEN NVL(custrecord_jj_final_tree_weight, 0)
+                                                    - NVL(custrecord_jj_casting_loss, 0)
+                                                    - NVL(custrecord_jj_tree_weight, 0)
+                                                    - NVL(custrecord_jj_bag_components_wt, 0)
+                                                ELSE 0
+                                            END
+                                        ) AS Tree_Cutting_Cleaning_Received_Quantity_Gold,
+                                    
+                                        SUM(
+                                            CASE
+                                                WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                                AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                                THEN NVL(custrecord_jj_received_yield_weight, 0)
+                                                    - NVL(custrecord_jj_bag_components_wt, 0)
+                                                ELSE 0
+                                            END
+                                        ) AS Grinding_Issued_Net_Weight_Gold,
+                                    
+                                        SUM(
+                                            CASE
+                                                WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                                AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                                THEN NVL(custrecord_jj_loss_weight, 0)
+                                                ELSE 0
+                                            END
+                                        ) AS Grinding_Loss_Gold,
+                                    
+                                        SUM(
+                                            CASE
+                                                WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                                AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                                THEN NVL(custrecord_jj_received_yield_weight, 0)
+                                                    - NVL(custrecord_jj_loss_weight, 0)
+                                                    - NVL(custrecord_jj_bag_components_wt, 0)
+                                                ELSE 0
+                                            END
+                                        ) AS Grinding_Received_Quantity_Gold
+                                    
+                                    FROM customrecord_jj_wax_tree
+                                    
+                                    WHERE isinactive = 'F'
+                                    AND (
+                                        (
+                                            custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                            AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        )
+                                        OR (
+                                            custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                            AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        )
+                                        OR (
+                                            custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                            AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        )
+                                    )
                                     `;
                                     let waxTreeResults = query.runSuiteQL({ query: waxTreeQuery }).asMappedResults();
 
@@ -958,9 +1052,9 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     {
                                         const row = waxTreeResults[0];
                                         const waxDeptMap = {
-                                            [CASTING]: { production: parseFloat(row.casting_qty || 0), loss: parseFloat(row.casting_loss || 0), received: parseFloat(row.casting_received_qty || 0) },
-                                            [TREE_CUTTING_CLEANING]: { production: parseFloat(row.tree_cutting_qty || 0), loss: parseFloat(row.tree_cutting_loss || 0), received: parseFloat(row.tree_cutting_received_qty || 0) },
-                                            [GRINDING]: { production: parseFloat(row.grinding_qty || 0), loss: parseFloat(row.grinding_loss || 0), received: parseFloat(row.grinding_received_qty || 0) }
+                                            [CASTING]: { production: parseFloat(row.casting_issued_net_weight_gold || 0), loss: parseFloat(row.casting_loss_gold || 0), received: parseFloat(row.casting_received_quantity_gold || 0) },
+                                            [TREE_CUTTING_CLEANING]: { production: parseFloat(row.tree_cutting_cleaning_issued_net_weight_gold || 0), loss: parseFloat(row.tree_cutting_loss_gold || 0), received: parseFloat(row.tree_cutting_cleaning_received_quantity_gold || 0) },
+                                            [GRINDING]: { production: parseFloat(row.grinding_issued_net_weight_gold || 0), loss: parseFloat(row.grinding_loss_gold || 0), received: parseFloat(row.grinding_received_quantity_gold || 0) }
                                         };
                                         Object.keys(waxDeptMap).forEach(function (deptId) {
                                             Object.keys(groupedData).forEach(function (locId) {
@@ -1701,10 +1795,12 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     // ── Wax Tree (Overall & Production only) ─────────────────────────────────────
                     if (includeWaxTree)
                     {
+                        let waxTreeQueryStartTime = 0;
+                        let waxTreeQueryGovBefore = 0;  // Declare outside try for catch block access
                         try
                         {
-                            const waxTreeQueryStartTime = Date.now();
-                            const waxTreeQueryGovBefore = runtime.getCurrentScript().getRemainingUsage();
+                            waxTreeQueryStartTime = Date.now();
+                            waxTreeQueryGovBefore = runtime.getCurrentScript().getRemainingUsage();
                             
                             // log.debug(logPrefix + ' - Wax Tree Query Starting', {
                             //     governance_before: waxTreeQueryGovBefore,
@@ -1712,49 +1808,119 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             // });
                             
                             const waxTreeQuery = `
-                                SELECT
-                                    SUM(CASE WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                            AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
-                                        THEN NVL(custrecord_jj_final_tree_weight, 0) ELSE 0 END)   AS casting_qty,
-                                    SUM(CASE WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                            AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
-                                        THEN NVL(custrecord_jj_casting_loss, 0) ELSE 0 END)        AS casting_loss,
-                                    SUM(CASE WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                            AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
-                                        THEN NVL(custrecord_jj_metal_issue_weight, 0) ELSE 0 END)  AS casting_received_qty,
-                                    SUM(CASE WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                            AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
-                                        THEN NVL(custrecord_jj_received_yield_weight, 0) ELSE 0 END) AS tree_cutting_qty,
-                                    SUM(CASE WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                            AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
-                                        THEN NVL(custrecord_jj_cutting_loss_weight, 0) ELSE 0 END)  AS tree_cutting_loss,
-                                    SUM(CASE WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                            AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
-                                        THEN NVL(custrecord_jj_final_tree_weight - custrecord_jj_tree_weight
-                                                - custrecord_jj_bag_components_wt, 0) ELSE 0 END) AS tree_cutting_received_qty,
-                                    SUM(CASE WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                            AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
-                                        THEN NVL(custrecord_jj_received_weight, 0) ELSE 0 END)      AS grinding_qty,
-                                    SUM(CASE WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                            AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
-                                        THEN NVL(custrecord_jj_loss_weight, 0) ELSE 0 END)           AS grinding_loss,
-                                    SUM(CASE WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                            AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
-                                        THEN NVL(custrecord_jj_received_yield_weight
-                                                - custrecord_jj_bag_components_wt, 0) ELSE 0 END)  AS grinding_received_qty
-                                FROM customrecord_jj_wax_tree
-                                WHERE isinactive = 'F'
-                                AND (
-                                        (custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                        AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD'))
-                                    OR (custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                        AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD'))
-                                    OR (custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
-                                        AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD'))
-                                    )
+                            SELECT
+                                SUM(
+                                    CASE
+                                        WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                        AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        THEN NVL(custrecord_jj_metal_issue_weight, 0)
+                                        ELSE 0
+                                    END
+                                ) AS Casting_Issued_Net_Weight_Gold,
+                            
+                                SUM(
+                                    CASE
+                                        WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                        AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        THEN NVL(custrecord_jj_casting_loss, 0)
+                                        ELSE 0
+                                    END
+                                ) AS Casting_Loss_Gold,
+                            
+                                SUM(
+                                    CASE
+                                        WHEN custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                        AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        THEN NVL(custrecord_jj_metal_issue_weight, 0)
+                                            - NVL(custrecord_jj_casting_loss, 0)
+                                        ELSE 0
+                                    END
+                                ) AS Casting_Received_Quantity_Gold,
+                            
+                                SUM(
+                                    CASE
+                                        WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                        AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        THEN NVL(custrecord_jj_final_tree_weight, 0)
+                                            - NVL(custrecord_jj_tree_weight, 0)
+                                            - NVL(custrecord_jj_bag_components_wt, 0)
+                                        ELSE 0
+                                    END
+                                ) AS Tree_Cutting_Cleaning_Issued_Net_Weight_Gold,
+                            
+                                SUM(
+                                    CASE
+                                        WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                        AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        THEN NVL(custrecord_jj_cutting_loss_weight, 0)
+                                        ELSE 0
+                                    END
+                                ) AS Tree_Cutting_Loss_Gold,
+                            
+                                SUM(
+                                    CASE
+                                        WHEN custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                        AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        THEN NVL(custrecord_jj_final_tree_weight, 0)
+                                            - NVL(custrecord_jj_casting_loss, 0)
+                                            - NVL(custrecord_jj_tree_weight, 0)
+                                            - NVL(custrecord_jj_bag_components_wt, 0)
+                                        ELSE 0
+                                    END
+                                ) AS Tree_Cutting_Cleaning_Received_Quantity_Gold,
+                            
+                                SUM(
+                                    CASE
+                                        WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                        AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        THEN NVL(custrecord_jj_received_yield_weight, 0)
+                                            - NVL(custrecord_jj_bag_components_wt, 0)
+                                        ELSE 0
+                                    END
+                                ) AS Grinding_Issued_Net_Weight_Gold,
+                            
+                                SUM(
+                                    CASE
+                                        WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                        AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        THEN NVL(custrecord_jj_loss_weight, 0)
+                                        ELSE 0
+                                    END
+                                ) AS Grinding_Loss_Gold,
+                            
+                                SUM(
+                                    CASE
+                                        WHEN custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                        AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                        THEN NVL(custrecord_jj_received_yield_weight, 0)
+                                            - NVL(custrecord_jj_loss_weight, 0)
+                                            - NVL(custrecord_jj_bag_components_wt, 0)
+                                        ELSE 0
+                                    END
+                                ) AS Grinding_Received_Quantity_Gold
+                            
+                            FROM customrecord_jj_wax_tree
+                            
+                            WHERE isinactive = 'F'
+                            AND (
+                                (
+                                    custrecord_jj_to_cutting_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                    AND custrecord_jj_to_cutting_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                )
+                                OR (
+                                    custrecord_jj_to_grinding_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                    AND custrecord_jj_to_grinding_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                )
+                                OR (
+                                    custrecord_jj_to_bagging_date >= TO_DATE('${startDate}', 'YYYY-MM-DD')
+                                    AND custrecord_jj_to_bagging_date <= TO_DATE('${endDate}', 'YYYY-MM-DD')
+                                )
+                            )
                             `;
 
                             const waxResults = query.runSuiteQL({ query: waxTreeQuery }).asMappedResults();
+
+                            log.debug('Wax tree results', waxResults);
                             
                             // Log governance for wax tree query during execution
                             const waxTreeQueryEndTime = Date.now();
@@ -1772,19 +1938,19 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                 const row = waxResults[0];
                                 const waxDeptMap = {
                                     [CASTING]: {
-                                        production: parseFloat(row.casting_qty || 0),
-                                        loss: parseFloat(row.casting_loss || 0),
-                                        received: parseFloat(row.casting_received_qty || 0)
+                                        production: parseFloat(row.casting_issued_net_weight_gold || 0),
+                                        loss: parseFloat(row.casting_loss_gold || 0),
+                                        received: parseFloat(row.casting_received_quantity_gold || 0)
                                     },
                                     [TREE_CUTTING_CLEANING]: {
-                                        production: parseFloat(row.tree_cutting_qty || 0),
-                                        loss: parseFloat(row.tree_cutting_loss || 0),
-                                        received: parseFloat(row.tree_cutting_received_qty || 0)
+                                        production: parseFloat(row.tree_cutting_cleaning_issued_net_weight_gold || 0),
+                                        loss: parseFloat(row.tree_cutting_loss_gold || 0),
+                                        received: parseFloat(row.tree_cutting_cleaning_received_quantity_gold || 0)
                                     },
                                     [GRINDING]: {
-                                        production: parseFloat(row.grinding_qty || 0),
-                                        loss: parseFloat(row.grinding_loss || 0),
-                                        received: parseFloat(row.grinding_received_qty || 0)
+                                        production: parseFloat(row.grinding_issued_net_weight_gold || 0),
+                                        loss: parseFloat(row.grinding_loss_gold || 0),
+                                        received: parseFloat(row.grinding_received_quantity_gold || 0)
                                     }
                                 };
 
