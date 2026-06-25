@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @NApiVersion 2.1
  */
 /************************************************************************************************
@@ -71,36 +71,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
         const efficiencyAnalysisResults = {
 
             /**
-             * Log governance metrics after query execution
-             * @param {string} queryName - Name/identifier of the query
-             * @param {number} startTime - Start time in milliseconds
-             * @param {number} govBeforeQuery - Governance remaining before query
-             * @param {number} rowCount - Number of rows returned
-             * @param {number|null} duration - Duration in milliseconds
-             */
-            logGovernanceMetrics(queryName, startTime, govBeforeQuery, rowCount, duration) {
-                const endTime = Date.now();
-                duration = duration || (endTime - startTime);
-                const govAfterQuery = runtime.getCurrentScript().getRemainingUsage();
-                const govUsed = govBeforeQuery - govAfterQuery;
-                const govUsagePercent = parseFloat(((1000 - govAfterQuery) / 1000 * 100).toFixed(2));
-
-                const metricsLog = {
-                    query_name: queryName,
-                    execution_start_time: new Date(startTime).toISOString(),
-                    execution_duration_ms: duration,
-                    rows_returned: rowCount,
-                    governance_used: govUsed,
-                    governance_remaining: govAfterQuery,
-                    governance_limit: 1000,
-                    governance_usage_percent: govUsagePercent
-                };
-
-                // log.debug('GOVERNANCE_METRICS - ' + queryName, metricsLog);
-                return metricsLog;
-            },
-
-            /**
              * Execute a SQL query and return results using query.create API
              * @param {string} sqlQuery - The SQL query to execute
              * @param {string} queryName - Name/identifier of the query for logging
@@ -117,21 +87,10 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         return [];
                     }
 
-                    const startTime = Date.now();
-                    let govBeforeQuery = 0;  // Declare at top so it's accessible in catch block
-                    govBeforeQuery = runtime.getCurrentScript().getRemainingUsage();
-
-                    // log.debug('runQuery - Starting: ' + queryName, { 
-                    //     queryLength: sqlQuery.length,
-                    //     governance_before: govBeforeQuery,
-                    //     start_time: new Date(startTime).toISOString()
-                    // });
-
                     const results = [];
                     const PAGE_SIZE = 1000;
                     let pageIndex = 0;
                     let pagedData;
-                    const pageMetrics = []; // Track governance per page
                     
                     pagedData = query.runSuiteQLPaged({
                         query: sqlQuery,
@@ -140,79 +99,26 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     
                     do
                     {
-                        const pageStartGov = runtime.getCurrentScript().getRemainingUsage();
-                        const pageStartTime = Date.now();
-
                         if (pageIndex === 0 && pagedData.pageRanges.length === 0)
                         {
-                            // log.debug(queryName + ' - No data returned', { pageRanges: 0 });
                             break;
                         }
 
                         const page = pagedData.fetch({ index: pageIndex });
                         const mapped = page.data.asMappedResults();
-                        const pageRowCount = mapped.length;
                         
                         for (let i = 0; i < mapped.length; i++)
                         {
                             results.push(mapped[i]);
                         }
                         
-                        const pageEndGov = runtime.getCurrentScript().getRemainingUsage();
-                        const pageGovUsed = pageStartGov - pageEndGov;
-                        const pageLoadTime = Date.now() - pageStartTime;
-                        
-                        // Log per-page metrics
-                        const pageMetric = {
-                            page_index: pageIndex,
-                            rows_in_page: pageRowCount,
-                            governance_used_this_page: pageGovUsed,
-                            governance_remaining: pageEndGov,
-                            page_load_time_ms: pageLoadTime,
-                            timestamp: new Date(pageStartTime).toISOString()
-                        };
-                        pageMetrics.push(pageMetric);
-                        
-                        // log.debug(queryName + ' - Page ' + pageIndex + ' loaded', pageMetric);
-                        
                         pageIndex++;
                     } while (pagedData && pageIndex < pagedData.pageRanges.length);
-
-                    // Log final summary with all page metrics
-                    const finalGov = runtime.getCurrentScript().getRemainingUsage();
-                    const totalGovUsed = govBeforeQuery - finalGov;
-                    const totalLoadTime = Date.now() - startTime;
-                    
-                    const summaryMetrics = {
-                        query_name: queryName,
-                        execution_start_time: new Date(startTime).toISOString(),
-                        execution_duration_ms: totalLoadTime,
-                        total_rows_returned: results.length,
-                        total_pages_loaded: pageIndex,
-                        governance_used_total: totalGovUsed,
-                        governance_remaining: finalGov,
-                        governance_limit: 1000,
-                        governance_usage_percent: parseFloat(((1000 - finalGov) / 1000 * 100).toFixed(2)),
-                        page_details: pageMetrics
-                    };
-                    
-                    // log.debug('GOVERNANCE_METRICS - ' + queryName, summaryMetrics);
 
                     return results;
                 } catch (error)
                 {
                     log.error('runQuery - Error in ' + queryName, error);
-                    log.error('runQuery - SQL Query was', sqlQuery ? sqlQuery.substring(0, 500) : 'NULL');
-                    
-                    // Log governance even on error
-                    const errorGov = runtime.getCurrentScript().getRemainingUsage();
-                    const errorGovUsed = govBeforeQuery - errorGov;
-                    log.error(queryName + '_ERROR - Governance at error', {
-                        governance_used: errorGovUsed,
-                        governance_remaining: errorGov,
-                        pages_loaded_before_error: pageIndex
-                    });
-                    
                     return [];
                 }
             },
@@ -278,6 +184,11 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     const sqlStartDate = startDate + ' 00:00:00';
                     const sqlEndDate = endDate + ' 23:59:59';
 
+                    let locationId = location;
+                    if (locationId && String(locationId).includes('|')) {
+                        locationId = String(locationId).split('|')[0];
+                    }
+
                     // log.debug(logPrefix + " - Parameters", {
                     //     location: location,
                     //     startDate: sqlStartDate,
@@ -300,21 +211,21 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     // Build the SQL query to fetch departments, employees, bags, and categories
                     let sqlQuery = `
                         SELECT DISTINCT
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB."ID") AS department_id,
-                            BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB.name) AS department_name,
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB.custrecord_jj_mandept_location) AS location_id,
-                            BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB.name_0) AS location_name,
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_employee) AS employee_id,
-                            BUILTIN_RESULT.TYPE_STRING(employee.firstname) AS firstname,
-                            BUILTIN_RESULT.TYPE_STRING(employee.lastname) AS lastname,
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_bagno) AS bag_id,
-                            BUILTIN_RESULT.TYPE_STRING(NVL(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.altname, CUSTOMRECORD_JJ_BAG_GENERATION_SUB.bag_name_original)) AS bag_name,
-                            BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.name_0_0) AS category_name,
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.category_id) AS category_id,
-                            BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.sub_category_name) AS sub_category_name,
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.sub_category_id) AS sub_category_id,
-                            BUILTIN_RESULT.TYPE_STRING(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.print_design_name) AS print_design_name,
-                            BUILTIN_RESULT.TYPE_INTEGER(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.print_design_id) AS print_design_id
+                            CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB."ID" AS department_id,
+                            CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB.name AS department_name,
+                            CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB.custrecord_jj_mandept_location AS location_id,
+                            CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB.name_0 AS location_name,
+                            CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_employee AS employee_id,
+                            employee.firstname AS firstname,
+                            employee.lastname AS lastname,
+                            CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_bagno AS bag_id,
+                            NVL(CUSTOMRECORD_JJ_BAG_GENERATION_SUB.altname, CUSTOMRECORD_JJ_BAG_GENERATION_SUB.bag_name_original) AS bag_name,
+                            CUSTOMRECORD_JJ_BAG_GENERATION_SUB.name_0_0 AS category_name,
+                            CUSTOMRECORD_JJ_BAG_GENERATION_SUB.category_id AS category_id,
+                            CUSTOMRECORD_JJ_BAG_GENERATION_SUB.sub_category_name AS sub_category_name,
+                            CUSTOMRECORD_JJ_BAG_GENERATION_SUB.sub_category_id AS sub_category_id,
+                            CUSTOMRECORD_JJ_BAG_GENERATION_SUB.print_design_name AS print_design_name,
+                            CUSTOMRECORD_JJ_BAG_GENERATION_SUB.print_design_id AS print_design_id
                         FROM CUSTOMRECORD_JJ_OPERATIONS,
                             (SELECT 
                                 CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN.custrecord_jj_operations AS custrecord_jj_operations_join,
@@ -381,11 +292,10 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             AND BUILTIN.CAST_AS(CUSTOMRECORD_JJ_OPERATIONS.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') < TO_DATE('${sqlEndDate}', 'YYYY-MM-DD HH24:MI:SS')
                     `;
 
-                    // Add location filter if provided
-                    if (location)
+                    if (locationId)
                     {
                         sqlQuery += `
-                            AND CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB.custrecord_jj_mandept_location_crit IN ('${location}')
+                            AND CUSTOMRECORD_JJ_MANUFACTURING_DEPT_SUB.custrecord_jj_mandept_location_crit IN ('${locationId}')
                         `;
                     }
 
@@ -406,7 +316,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         `;
                     }
 
-                    // // loop through the sqlQuery string and log each 2500 characters untill the end of the string (to avoid log truncation)
+                    // loop through the sqlQuery string and log each 2500 characters untill the end of the string (to avoid log truncation)
                     // for (let i = 0; i < sqlQuery.length; i += 2500)
                     // {
                     //     log.debug(logPrefix + ' - buildEfficiencyData SQL Query Part', sqlQuery.substring(i, i + 2500));
@@ -717,9 +627,9 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             let startingQtyResults = this.runQuery(startingQtyQuery, logPrefix + '_StartingQtyQuery');
 
                             // loop through the sqlQuery string and log each 2500 characters untill the end of the string (to avoid log truncation)
-                            for (let i = 0; i < startingQtyQuery.length; i += 2500) {
-                                log.debug(logPrefix + ' - buildEfficiencyData Starting Qty Query Part', startingQtyQuery.substring(i, i + 2500));
-                            }
+                            // for (let i = 0; i < startingQtyQuery.length; i += 2500) {
+                            //     log.debug(logPrefix + ' - buildEfficiencyData Starting Qty Query Part', startingQtyQuery.substring(i, i + 2500));
+                            // }
 
                             // Create maps for department-level and category-level data
                             const startingQtyMap = {};
@@ -1096,9 +1006,6 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     });
                                 });
                             });
-                        } else
-                        {
-                            log.debug(logPrefix + " - Starting Qty Fetch", "No departments found in groupedData");
                         }
                     } catch (err)
                     {
@@ -1244,6 +1151,11 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     const deptFilter = reqDepartmentId ? `AND op.custrecord_jj_oprtns_department = '${reqDepartmentId}'` : ``;
                     const empFilter = reqEmployeeId ? `AND op.custrecord_jj_oprtns_employee = '${reqEmployeeId}'` : ``;
 
+                    let locationFilter = location;
+                    if (locationFilter && String(locationFilter).includes('|')) {
+                        locationFilter = String(locationFilter).split('|')[0];
+                    }
+
                     // ── SINGLE AGGREGATING QUERY ─────────────────────────────────────────────────
                     // Groups by dept + employee + bag + print-design so that purity can be resolved
                     // per bag.  BUILTIN_RESULT.TYPE_* is applied to EVERY SELECT expression so that
@@ -1251,10 +1163,10 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                     // "STARTING_QTY_GOLD").  Short aliases used consistently throughout.
                     const sqlQuery = `
                         SELECT
-                            BUILTIN_RESULT.TYPE_INTEGER(op.custrecord_jj_oprtns_department)      AS department_id,
-                            BUILTIN_RESULT.TYPE_STRING(dept.name)                                  AS department_name,
-                            BUILTIN_RESULT.TYPE_INTEGER(dept.custrecord_jj_mandept_location)       AS location_id,
-                            BUILTIN_RESULT.TYPE_STRING(loc.name)                                   AS location_name${employeeSelect ? ',' + employeeSelect : ''},
+                            op.custrecord_jj_oprtns_department      AS department_id,
+                            dept.name                                  AS department_name,
+                            dept.custrecord_jj_mandept_location       AS location_id,
+                            loc.name                                   AS location_name${employeeSelect ? ',' + employeeSelect : ''},
                             COUNT(DISTINCT op.custrecord_jj_oprtns_bagno) AS bag_count,
                             
                             SUM(CASE WHEN item.class IN (${GOLD_AND_JEWELRY_CLASS_IDS.join(', ')}) THEN
@@ -1450,7 +1362,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                 >= TO_DATE('${sqlStartDate}', 'YYYY-MM-DD HH24:MI:SS')
                             AND BUILTIN.CAST_AS(op.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED')
                                 <  TO_DATE('${sqlEndDate}',   'YYYY-MM-DD HH24:MI:SS')
-                            ${location ? `AND dept.custrecord_jj_mandept_location = '${location}'` : ''}
+                            ${locationFilter ? `AND dept.custrecord_jj_mandept_location = ${locationFilter}` : ''}
                             ${deptFilter}
                             ${empFilter}
                         GROUP BY
@@ -1714,8 +1626,8 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                         
                         const locationBagCountQuery = `
                             SELECT
-                                BUILTIN_RESULT.TYPE_INTEGER(dept.custrecord_jj_mandept_location) AS location_id,
-                                BUILTIN_RESULT.TYPE_STRING(loc.name) AS location_name,
+                                dept.custrecord_jj_mandept_location  AS location_id,
+                                loc.name                             AS location_name,
                                 COUNT(DISTINCT op.custrecord_jj_oprtns_bagno) AS bag_count
                             FROM CUSTOMRECORD_JJ_OPERATIONS op
                             LEFT JOIN CUSTOMRECORD_JJ_DIRECT_ISSUE_RETURN dir
@@ -1736,15 +1648,19 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                                     OR NVL(dir.custrecord_jj_dir_starting_qty, 0) > 0
                                 )
                                 AND BUILTIN.CAST_AS(op.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') >= TO_DATE('${sqlStartDate}', 'YYYY-MM-DD HH24:MI:SS')
-                                AND BUILTIN.CAST_AS(op.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') < TO_DATE('${sqlEndDate}', 'YYYY-MM-DD HH24:MI:SS')
+                                AND BUILTIN.CAST_AS(op.custrecord_jj_oprtns_exit, 'TIMESTAMP_TZ_TRUNCED') <  TO_DATE('${sqlEndDate}',   'YYYY-MM-DD HH24:MI:SS')
                                 ${repairOrderFilter !== null && repairOrderFilter !== undefined ? `AND NVL(op.custrecord_jj_repair_order, 'F') = '${repairOrderFilter}'` : ''}
-                                ${location ? `AND dept.custrecord_jj_mandept_location = '${location}'` : ''}
+                                ${locationFilter ? `AND dept.custrecord_jj_mandept_location = '${locationFilter}'` : ''}
                             GROUP BY dept.custrecord_jj_mandept_location, loc.name
                         `;
                         
                         const locationBagCountResults = this.runQuery(locationBagCountQuery, logPrefix + '_LocationBagCountQuery');
 
-                        log.debug('locationBagCountResults', locationBagCountResults);
+                        // loop through the sqlQuery string and log each 2500 characters untill the end of the string (to avoid log truncation)
+                        // for (let i = 0; i < locationBagCountQuery.length; i += 2500)
+                        // {
+                        //     log.debug(logPrefix + ' - Location Bag Count Query Part', locationBagCountQuery.substring(i, i + 2500));
+                        // }
                         
                         // Log governance for location bag count query during execution
                         const locationBagCountQueryEndTime = Date.now();
@@ -1921,7 +1837,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
                             const waxResults = query.runSuiteQL({ query: waxTreeQuery }).asMappedResults();
 
                             log.debug('Wax tree results', waxResults);
-                            
+
                             // Log governance for wax tree query during execution
                             const waxTreeQueryEndTime = Date.now();
                             const waxTreeQueryGovAfter = runtime.getCurrentScript().getRemainingUsage();
@@ -2340,6 +2256,7 @@ define(['N/search', 'N/record', 'N/config', 'N/url', 'N/query', 'N/runtime', 'N/
         return {
             searchResults: efficiencyAnalysisResults,
             // Old functions (kept for other features)
+            runQuery: efficiencyAnalysisResults.runQuery.bind(efficiencyAnalysisResults),
             buildEfficiencyData: efficiencyAnalysisResults.buildEfficiencyData.bind(efficiencyAnalysisResults),
             getOverallEfficiencyData: efficiencyAnalysisResults.getOverallEfficiencyData.bind(efficiencyAnalysisResults),
             getProductionEfficiencyData: efficiencyAnalysisResults.getProductionEfficiencyData.bind(efficiencyAnalysisResults),

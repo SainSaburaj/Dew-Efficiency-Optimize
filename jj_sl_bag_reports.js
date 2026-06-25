@@ -37,7 +37,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
  * @param{cm_efficiency} cm_efficiency
  */
     (runtime, search, serverWidget, file, format, https, record, task, jj_cm_ns_utility, cm_model, cm_functions, cm_efficiency) => {
-        // const CASTING_DEPARTMENT_ID = 9;
+        const CASTING_DEPARTMENT_ID = 9;
         const LOC_TRANS_REASON_CODE = 51; // Reason code for Location Transfer operations
         // const TREE_CUTTING_DEPARTMENT_ID = 10;
         // const BARCODING_AND_FG_DEPT_ID = 25;
@@ -49,47 +49,44 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             listDepartments() {
                 try {
                     let requestBody = rootContext.body;
-                    let locations = requestBody?.locations || [];
+                    log.debug('rootContext.body', rootContext.body);
                     let departmentList;
-                    // if (requestBody?.department_name == "Casting") {
-                    //     departmentList = cm_model.getAllManufacturingDepartments([CASTING_DEPARTMENT_ID], requestBody?.department_name);
-                    // } else 
-                    if (requestBody?.dept_hod) {
-                        departmentList = cm_model.getAllManufacturingDepartments(null, "dept_hod", null, null, locations);
+                    if (requestBody?.department_name == "Casting") {
+                        departmentList = cm_model.getAllManufacturingDepartments([CASTING_DEPARTMENT_ID], requestBody?.department_name);
+                    } else if (requestBody?.dept_hod) {
+                        departmentList = cm_model.getAllManufacturingDepartments(null, "dept_hod");
                     } else if (requestBody?.params == "loss_recovery") {
                         // Get only departments that have actual loss items
                         let materialType = requestBody?.material_type || 'gold_type';
                         let isInProgress = requestBody?.isInProgress || false;
-                        // let includeCastingLoss = requestBody?.include_casting_loss || false;
+                        let includeCastingLoss = requestBody?.include_casting_loss || false;
 
                         departmentList = cm_model.getDepartmentsWithLoss(
                             materialType,
                             isInProgress,
                             requestBody?.user_id,
-                            requestBody?.all_department,
-                            locations
+                            requestBody?.all_department
                         );
 
-                        // // When write-off page requests, also include departments with lossStatus inventory
-                        // // (e.g. Casting which bypasses In Progress and recovers directly from Loss)
-                        // if (includeCastingLoss && isInProgress) {
-                        //     let lossModeDepts = cm_model.getDepartmentsWithLoss(
-                        //         materialType,
-                        //         false, // lossStatus
-                        //         requestBody?.user_id,
-                        //         requestBody?.all_department,
-                        //         locations
-                        //     );
-                        //     // Merge — add any loss-mode dept not already in the list
-                        //     let existingIds = new Set(departmentList.map(d => d.value));
-                        //     lossModeDepts.forEach(d => {
-                        //         if (!existingIds.has(d.value)) {
-                        //             departmentList.push(d);
-                        //         }
-                        //     });
-                        // }
+                        // When write-off page requests, also include departments with lossStatus inventory
+                        // (e.g. Casting which bypasses In Progress and recovers directly from Loss)
+                        if (includeCastingLoss && isInProgress) {
+                            let lossModeDepts = cm_model.getDepartmentsWithLoss(
+                                materialType,
+                                false, // lossStatus
+                                requestBody?.user_id,
+                                requestBody?.all_department
+                            );
+                            // Merge — add any loss-mode dept not already in the list
+                            let existingIds = new Set(departmentList.map(d => d.value));
+                            lossModeDepts.forEach(d => {
+                                if (!existingIds.has(d.value)) {
+                                    departmentList.push(d);
+                                }
+                            });
+                        }
                     } else if (requestBody?.params == "user_specific") {
-                        departmentList = cm_model.getAllManufacturingDepartments(null, requestBody?.params, requestBody?.all_department, requestBody?.user_id, locations);
+                        departmentList = cm_model.getAllManufacturingDepartments(null, requestBody?.params, requestBody?.all_department, requestBody?.user_id);
                     } else if (requestBody?.params == "location_transfer") {
                         departmentList = cm_model.getAllManufacturingDepartments(null, requestBody?.params, requestBody?.all_department, requestBody?.user_id);
                         // Extract locations IDs from departments
@@ -122,7 +119,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                             });
                         }
                     } else {
-                        departmentList = cm_model.getAllManufacturingDepartments(null, requestBody?.params, null, null, locations);
+                        departmentList = cm_model.getAllManufacturingDepartments(null, requestBody?.params);
                     }
 
                     // log.debug('departmentList with sub-locations', departmentList);
@@ -149,20 +146,18 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     let timestamp = requestBody.timestamp ? requestBody.timestamp : null;
                     let employee = requestBody.employee ? requestBody.employee : null;
                     let date = requestBody.date ? requestBody.date : null;
-                    let locations = requestBody.locations || null;
-
 
                     if (params == 'active_bags_for_overdue') {
-                        let overdueMaterialBags = cm_model.getOverdueMaterialBags(departmentId, null, pageIndex, allDepartment, customerId, bagSearchKey, params, pageSize, overdueDays, locations);
+                        let overdueMaterialBags = cm_model.getOverdueMaterialBags(departmentId, null, pageIndex, allDepartment, customerId, bagSearchKey, params, pageSize, overdueDays);
                         overdueMaterialBags.timestamp = timestamp;
                         return { status: 'SUCCESS', reason: 'Bags With Overdue Materials Listed', data: overdueMaterialBags };
                     }
 
                     let activeBagsList = [];
                     if (params == 'active_bags') {
-                        activeBagsList = cm_model.getActiveBagsByEmployee(departmentId, null, pageIndex, allDepartment, customerId, bagSearchKey, params, pageSize, date, employee, null, locations);
+                        activeBagsList = cm_model.getActiveBagsByEmployee(departmentId, null, pageIndex, allDepartment, customerId, bagSearchKey, params, pageSize, date, employee);
                     } else {
-                        activeBagsList = cm_model.getActiveBags(departmentId, null, pageIndex, allDepartment, customerId, bagSearchKey, params, pageSize, locations);
+                        activeBagsList = cm_model.getActiveBags(departmentId, null, pageIndex, allDepartment, customerId, bagSearchKey, params, pageSize);
                     }
 
                     // const parsedActiveBagsList = {
@@ -213,7 +208,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             listBagComponents() {
                 try {
                     let requestBody = rootContext.body;
-                    // log.debug('getBagItemDetails requestBody', requestBody);
+                    log.debug('getBagItemDetails requestBody', requestBody);
 
                     let bagId = requestBody.bag_id ? requestBody.bag_id : null;
                     let bagComponents = cm_model.getBagItemDetails(bagId);
@@ -314,10 +309,9 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     let bagSearchKey = requestBody.bag_search_key || null;
                     let params = requestBody.params || null; // bag_movement
                     let pageSize = requestBody.page_size ? requestBody.page_size : null;
-                    let locations = requestBody?.locations;
 
                     // getBagsReadyToMove parameters (bags, department, bagSearchKey, pageIndex, params, manufacturer, pageSize)
-                    let bagMovementList = cm_model.getBagsReadyToMove(null, fromDepartmentId, bagSearchKey, pageIndex, params, fromManufacturerId, pageSize, null, locations);
+                    let bagMovementList = cm_model.getBagsReadyToMove(null, fromDepartmentId, bagSearchKey, pageIndex, params, fromManufacturerId, pageSize);
 
                     // log.debug('bagMovementList', bagMovementList);
                     // Handle both array (when pageIndex is null) and object (when pageIndex is provided) responses
@@ -424,28 +418,24 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     let materialType = requestBody.material_type; // gold_type, diamond_type, color_stone_type
                     let params = requestBody.params || "";
                     let isInProgress = requestBody.isInProgress || false;
-                    // let locations = requestBody.locations;
-                    let isCastingDept = requestBody?.isCastingDept || false;
 
                     if (!jj_cm_ns_utility.checkForParameter(departmentId)) {
                         return { status: 'ERROR', reason: 'Invalid Department Id', data: [] };
                     }
 
-                    let deptFields = cm_model.getDepartmentFields(departmentId);
-                    let locationId = deptFields?.location;
-                    let binNumber = deptFields?.bin;
-
-                    // if (jj_cm_ns_utility.checkForParameter(params) && params == 'recovery' && departmentId == CASTING_DEPARTMENT_ID && isInProgress) {
-                    if (jj_cm_ns_utility.checkForParameter(params) && params == 'recovery' && isCastingDept && isInProgress) {
+                    if (jj_cm_ns_utility.checkForParameter(params) && params == 'recovery' && departmentId == CASTING_DEPARTMENT_ID && isInProgress) {
                         return { status: 'SUCCESS', reason: 'No Result Availble', data: [] };
-                    // } else if (jj_cm_ns_utility.checkForParameter(params) && (params == 'recovery' || params == 'write-off') && departmentId == CASTING_DEPARTMENT_ID) {
-                    } else if (jj_cm_ns_utility.checkForParameter(params) && (params == 'recovery' || params == 'write-off') && isCastingDept) {
-                        return cm_model.getTodaysWaxTreeLoss(locationId);
+                    } else if (jj_cm_ns_utility.checkForParameter(params) && (params == 'recovery' || params == 'write-off') && departmentId == CASTING_DEPARTMENT_ID) {
+                        return cm_model.getTodaysWaxTreeLoss();
                     }
 
                     if (!jj_cm_ns_utility.checkForParameter(materialType)) {
                         return { status: 'ERROR', reason: 'Invalid Material Type', data: [] };
                     }
+
+                    let deptFields = cm_model.getDepartmentFields(departmentId);
+                    let locationId = deptFields?.location;
+                    let binNumber = deptFields?.bin;
 
                     if (!locationId || !binNumber) {
                         return { status: 'ERROR', reason: 'No location or Bin found for the department', data: [] };
@@ -607,6 +597,8 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             getTotalMaterialWeights() {
                 try {
                     let requestBody = rootContext.body;
+                    log.debug('getTotalMaterialWeights requestBody', requestBody);
+
                     let bagIds = requestBody.bag_ids ? requestBody.bag_ids : null;
                     let params = requestBody.params ? requestBody.params : null;
 
@@ -623,11 +615,12 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                         };
                     }
 
-                    // // Get all three weights in one call
-                    // let goldWeight = cm_model.getTotalGoldWeightForBags(bagIds);
-                    // let diamondWeight = cm_model.getTotalDiamondWeightForBags(bagIds);
-                    // let colorStoneWeight = cm_model.getTotalColorStoneWeightForBags(bagIds);
-                    let { goldWeight, diamondWeight, colorStoneWeight } = cm_model.getTotalMaterialWeightsForBags(bagIds);
+                    log.debug('getTotalMaterialWeights: Processing bagIds:', bagIds);
+
+                    // Get all three weights in one call
+                    let goldWeight = cm_model.getTotalGoldWeightForBags(bagIds);
+                    let diamondWeight = cm_model.getTotalDiamondWeightForBags(bagIds);
+                    let colorStoneWeight = cm_model.getTotalColorStoneWeightForBags(bagIds);
 
                     log.debug('getTotalMaterialWeights: Final weights:', { goldWeight, diamondWeight, colorStoneWeight });
 
@@ -1361,9 +1354,8 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     let requestBody = rootContext.body;
                     log.debug('listMetal rootContext.body', rootContext.body);
                     let departmentId = requestBody?.department_id || "";
-                    let isCastingDept = requestBody?.isCastingDept || false;
 
-                    let metalList = cm_model.getMetals(departmentId, isCastingDept);
+                    let metalList = cm_model.getMetals(departmentId);
                     log.debug('metalList', metalList);
                     if (metalList && metalList.length) {
                         return { status: 'SUCCESS', reason: 'Metal Listed', data: metalList };
@@ -1846,18 +1838,18 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                         }
                         efficiencyData = cm_efficiency.buildEfficiencyData(locationId, startDate, endDate, options);
                     } else {
-                        if (isRepairOnly === true) {
-                            // Repair Efficiency Analysis — repair orders only
+                    if (isRepairOnly === true) {
+                        // Repair Efficiency Analysis — repair orders only
                             options.repairOrderFilter = 'T';
                             options.includeWaxTree = false;
                             efficiencyData = cm_efficiency.buildSummaryEfficiencyData(locationId, startDate, endDate, options);
-                        } else if (isRepairOnly === false) {
-                            // Production Efficiency Analysis — non-repair orders only
+                    } else if (isRepairOnly === false) {
+                        // Production Efficiency Analysis — non-repair orders only
                             options.repairOrderFilter = 'F';
                             options.includeWaxTree = true;
                             efficiencyData = cm_efficiency.buildSummaryEfficiencyData(locationId, startDate, endDate, options);
-                        } else {
-                            // Overall Efficiency Analysis — all operations (repair + production)
+                    } else {
+                        // Overall Efficiency Analysis — all operations (repair + production)
                             options.repairOrderFilter = null;
                             options.includeWaxTree = true;
                             efficiencyData = cm_efficiency.buildSummaryEfficiencyData(locationId, startDate, endDate, options);
@@ -1885,8 +1877,6 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                 try {
                     let requestBody = rootContext.body;
                     let locationId = requestBody?.location;
-                    let exportLevel = requestBody?.exportLevel || 'department';
-                    let combinedLocation = locationId ? String(locationId) + '|' + exportLevel : '';
                     let startDate = requestBody?.startDate;
                     let endDate = requestBody?.endDate;
                     let isRepairOnly = requestBody?.isRepairOnly;
@@ -1915,14 +1905,14 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                         }
                     }
 
-                    log.debug('exportEfficiencyExcel', { locationId, exportLevel, startDate, endDate, isRepairOnly, userId, userEmail });
+                    log.debug('exportEfficiencyExcel', { locationId, startDate, endDate, isRepairOnly, userId, userEmail });
 
                     let mrTask = task.create({
                         taskType: task.TaskType.MAP_REDUCE,
                         scriptId: 'customscript_jj_mr_efficiency_excel',
                         deploymentId: 'customdeploy_jj_mr_efficiency_excel',
                         params: {
-                            'custscript_jj_eff_excel_location': combinedLocation,
+                            'custscript_jj_eff_excel_location': locationId ? String(locationId) : '',
                             'custscript_jj_eff_excel_start_date': startDate,
                             'custscript_jj_eff_excel_end_date': endDate,
                             'custscript_jj_eff_excel_is_repair': isRepairOnly === true ? 'T' : isRepairOnly === false ? 'F' : '',
@@ -2098,6 +2088,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             listEmployees() {
                 try {
                     let requestBody = rootContext.body;
+                    log.debug('rootContext.body', rootContext.body);
                     let employeeList = cm_model.getEmployees(requestBody.is_hod, requestBody.all_employees);
                     return { status: 'SUCCESS', reason: 'HODs Listed', data: employeeList };
                 } catch (error) {
@@ -2121,6 +2112,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             listInventoryAdjustments() {
                 try {
                     let requestBody = rootContext.body;
+                    log.debug('rootContext.body', rootContext.body);
                     if (!requestBody || !jj_cm_ns_utility.checkForParameter(requestBody)) {
                         return { status: 'ERROR', reason: 'No Parameters Found', data: [] };
                     }
@@ -2705,11 +2697,12 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             getDepartmentEmployeesMap() {
                 try {
                     let requestBody = rootContext.body;
-                    let locations = requestBody?.locations;
+                    log.debug('getDepartmentEmployeesMap rootContext.body', rootContext.body);
                     let employeeListMap = {};
                     if (requestBody.departments && requestBody.departments.length > 0) {
-                        employeeListMap = cm_model.getDepartmentEmployeesMap(requestBody.departments, requestBody.all_employees, locations);
+                        employeeListMap = cm_model.getDepartmentEmployeesMap(requestBody.departments, requestBody.all_employees);
                     }
+                    log.debug("employeeListMap", employeeListMap);
                     return { status: 'SUCCESS', reason: 'HODs Listed', data: employeeListMap };
                 } catch (error) {
                     log.error('error @ getDepartmentEmployeesMap', error);
@@ -3017,9 +3010,10 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             getLossTransactions() {
                 try {
                     const requestBody = rootContext.body;
-                    let departmentId = (requestBody && requestBody.department_id) ? requestBody.department_id : null;
-                    let locations = requestBody?.locations || null;
-                    return cm_model.getLossTransactions(departmentId, locations);
+                    log.debug('getLossTransactions requestBody', requestBody);
+                    const departmentId = (requestBody && requestBody.department_id) ? requestBody.department_id : null;
+                    log.debug('getLossTransactions departmentId', departmentId);
+                    return cm_model.getLossTransactions(departmentId);
                 } catch (error) {
                     log.error('error @ getLossTransactions', error);
                     return { status: 'ERROR', reason: error.message, data: [] };
@@ -3069,18 +3063,22 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                 }
             },
             getRecoveryDataByDeptAndDateRange() {
-                try {
+                try
+                {
                     const requestBody = rootContext.body;
+                    log.debug('RECOVERY-EFFICIENCY requestBody', JSON.stringify(requestBody));
                     const startDate = (requestBody && requestBody.startDate) || '';
                     const endDate = (requestBody && requestBody.endDate) || '';
                     const departmentNames = (requestBody && requestBody.departmentNames) || [];
 
-                    if (!startDate || !endDate) {
+                    if (!startDate || !endDate)
+                    {
                         return { status: 'SUCCESS', reason: 'Invalid or missing date range', data: { recoveryMap: {} } };
                     }
 
                     // Support both single (legacy) and batch calls
-                    if (Array.isArray(departmentNames) && departmentNames.length > 0) {
+                    if (Array.isArray(departmentNames) && departmentNames.length > 0)
+                    {
                         return cm_model.getAvgRecoveryPercentageBatch(startDate, endDate, departmentNames);
                     }
 
@@ -3217,17 +3215,17 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             },
             parseJSON() {
                 try {
-                    // log.debug('parseJSON - Raw body', {
-                    //     body: this.body,
-                    //     type: typeof this.body,
-                    //     length: this.body ? this.body.length : 0
-                    // });
+                    log.debug('parseJSON - Raw body', {
+                        body: this.body,
+                        type: typeof this.body,
+                        length: this.body ? this.body.length : 0
+                    });
 
                     if (this.body && this.body.trim() !== '') {
                         this.body = JSON.parse(this.body);
-                        // log.debug('parseJSON - Parsed successfully', this.body);
+                        log.debug('parseJSON - Parsed successfully', this.body);
                     } else {
-                        // log.debug('parseJSON - Empty body, setting to empty object');
+                        log.debug('parseJSON - Empty body, setting to empty object');
                         this.body = {};
                     }
                 }
@@ -3241,9 +3239,9 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             */
             routeRequest() {
                 // DEBUG: Log all parameters and apiType
-                // log.debug("DEBUG: Full parameters object", this.parameters);
-                // log.debug("DEBUG: apiType value", this.parameters.apiType);
-                // log.debug("DEBUG: apiType type", typeof this.parameters.apiType);
+                log.debug("DEBUG: Full parameters object", this.parameters);
+                log.debug("DEBUG: apiType value", this.parameters.apiType);
+                log.debug("DEBUG: apiType type", typeof this.parameters.apiType);
                 if (this.method == "OPTIONS") {
                     return { status: 'SUCCESS', reason: 'OPTIONS request - no action taken', data: null };
                 }
@@ -3420,7 +3418,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
             * @returns {boolean}
             */
             sendResponse(responseObj) {
-                // log.debug('responseObj', responseObj)
+                log.debug('responseObj', responseObj)
                 let returnVal;
                 const wrapInEscapedBody = (data) => {
                     return encodeURIComponent(JSON.stringify(data));
@@ -3428,7 +3426,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                 const unwrapInEscapedBody = (data) => {
                     return JSON.parse(decodeURIComponent(data));
                 };
-                // log.debug('this.method', this.method);
+                log.debug('this.method', this.method);
                 // if (this.method === 'GET') {
                 //     let filePath = '../Views/FrontEndSPA/index.html';// 173013
                 //     let fileObj = file.load({ id: filePath });
@@ -3456,7 +3454,7 @@ define(['N/runtime', 'N/search', 'N/ui/serverWidget', 'N/file', 'N/format', 'N/h
                     if (responseObj.componentInventoryTracking) {
                         returnVal.componentInventoryTracking = wrapInEscapedBody(responseObj.componentInventoryTracking);
                     }
-                    // log.debug('returnVal', returnVal);
+                    log.debug('returnVal', returnVal);
                     return this.scriptContext.response.write(`${JSON.stringify(returnVal)}`, true)
                 }
                 return this.scriptContext.response.write(`Invalid method: ${this.method}`, true)
