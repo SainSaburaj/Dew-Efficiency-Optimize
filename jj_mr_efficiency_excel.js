@@ -93,9 +93,9 @@ define(['N/log', 'N/runtime', 'N/email', 'N/file', 'N/format', 'N/search', 'N/co
                 const dept = loc && loc.departments && loc.departments[deptId];
  
                 if (!dept) {
-                    log.debug('Departments with No Data', {
+                    log.debug('Department with No Data', {
                         deptId,
-                        availableDeptKeys: loc ? Object.keys(loc.departments || {}) : 'no loc/location data at all'
+                        departmentsWithData: loc ? Object.keys(loc.departments || {}) : 'no loc/location data at all'
                     });
                     return;
                 }
@@ -139,9 +139,9 @@ define(['N/log', 'N/runtime', 'N/email', 'N/file', 'N/format', 'N/search', 'N/co
                                     const purity = parseFloat(bagQty.metal_purity_percent || 0) / 100;
                                     const pureWt = recvG * purity;
                                     const pureLoss = lG * purity;
-                                    const netLoss = lG - pureLoss;
+                                    const netLoss = recvG > 0 ? lG / recvG : 0; // Net loss as decimal: lG / recvG
                                     const grossLossPct = recvG > 0 ? (lG / recvG * 100) : 0;
-                                    const netLossPct = recvG > 0 ? (netLoss / recvG * 100) : 0;
+                                    const netLossPct = recvG > 0 ? (lG / recvG * 100) : 0; // Same calculation as netLoss but as percentage
 
                                     const sD  = parseFloat(bagQty.starting_qty_diamond || 0);
                                     const iD  = parseFloat(bagQty.issued_qty_diamond || 0);
@@ -200,9 +200,9 @@ define(['N/log', 'N/runtime', 'N/email', 'N/file', 'N/format', 'N/search', 'N/co
                             const purity = parseFloat(bagQty.metal_purity_percent || 0) / 100;
                             const pureWt = recvG * purity;
                             const pureLoss = lG * purity;
-                            const netLoss = lG - pureLoss;
+                            const netLoss = recvG > 0 ? lG / recvG : 0; // Net loss as decimal: lG / recvG
                             const grossLossPct = recvG > 0 ? (lG / recvG * 100) : 0;
-                            const netLossPct = recvG > 0 ? (netLoss / recvG * 100) : 0;
+                            const netLossPct = recvG > 0 ? (lG / recvG * 100) : 0; // Same calculation as netLoss but as percentage
 
                             const sD  = parseFloat(bagQty.starting_qty_diamond || 0);
                             const iD  = parseFloat(bagQty.issued_qty_diamond || 0);
@@ -260,6 +260,7 @@ define(['N/log', 'N/runtime', 'N/email', 'N/file', 'N/format', 'N/search', 'N/co
                 const rawLocationParam = scriptObj.getParameter('custscript_jj_eff_excel_location') || '';
                 const exportLevel = (rawLocationParam.split('|')[1]) || 'department';
                 const isDeptExport = exportLevel === 'department';
+                const isRepair   = scriptObj.getParameter('custscript_jj_eff_excel_is_repair');
  
                 // ── Backend summary data (wax-tree adjustments) ──────────────────
                 let backendDeptSummaryData = {};
@@ -270,7 +271,6 @@ define(['N/log', 'N/runtime', 'N/email', 'N/file', 'N/format', 'N/search', 'N/co
                     }
                     const startDate  = scriptObj.getParameter('custscript_jj_eff_excel_start_date');
                     const endDate    = scriptObj.getParameter('custscript_jj_eff_excel_end_date');
-                    const isRepair   = scriptObj.getParameter('custscript_jj_eff_excel_is_repair');
  
                     let opts = { includeWaxTree: isRepair !== 'T' };
                     if      (isRepair === 'T') opts.repairOrderFilter = 'T';
@@ -632,13 +632,13 @@ define(['N/log', 'N/runtime', 'N/email', 'N/file', 'N/format', 'N/search', 'N/co
                     const lD  = sumField(rows, 'lD');
                     const rPc = sumField(rows, 'rPc');
                     const lPc = sumField(rows, 'lPc');
-                    const nl  = lG - pl;
+                    const nl  = rG > 0 ? lG / rG : 0; // Net loss as decimal: lG / recvG
                     const bagSet = new Set(rows.map(r => r.bagName));
                     return {
                         iG, rG, lG, pw, pl, nl, iD, rD, lD, rPc, lPc,
                         bagCount: bagSet.size,
                         grossLossPct: pctStr(lG, rG),
-                        netLossPct:   pctStr(nl, rG),
+                        netLossPct:   pctStr(lG, rG), // Same calculation as netLoss but as percentage: (lG / rG) * 100%
                         diamondLossPct: pctStr(lD, rD),
                         pureLoss: pl
                     };
@@ -679,7 +679,7 @@ define(['N/log', 'N/runtime', 'N/email', 'N/file', 'N/format', 'N/search', 'N/co
                 
                 // ── Compute loss percentages for grand total ──────────────────────
                 GT.grossLossPct = pctStr(GT.lG, GT.rG);
-                GT.netLossPct = pctStr(GT.nl, GT.rG);
+                GT.netLossPct = pctStr(GT.lG, GT.rG); // Same as grossLossPct: (lG / rG) * 100%
                 GT.diamondLossPct = pctStr(GT.lD, GT.rD);
  
                 // ── Weighted average recovery for grand total ────────────────────

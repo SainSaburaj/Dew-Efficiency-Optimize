@@ -33,7 +33,12 @@ const END_POINTS = {
         apiType: "getRecoveryDataByDeptAndDateRange",
         name: "GET_RECOVERY_DATA_BY_DEPT",
     },
-
+    // Export Efficiency Excel
+    EXPORT_EFFICIENCY_EXCEL: {
+        endpointName: "BAG_REPORTS_APP_ENDPOINT",
+        apiType: "exportEfficiencyExcel",
+        name: "EXPORT_EFFICIENCY_EXCEL",
+    },
 };
 
 export function useAllEfficiencyAnalysisApi() {
@@ -105,16 +110,18 @@ export function useAllEfficiencyAnalysisApi() {
         }
     };
     //fetch efficiency analysis
-    const fetchListEfficiencyAnalysis = async (locationId, startDate, endDate, isRepairOnly = null) => {
+    const fetchListEfficiencyAnalysis = async (locationId, startDate, endDate, isRepairOnly = null, departmentId = null, employeeId = null, isLazyLoad = false) => {
         try {
-            loading.value = true;
+            if (!isLazyLoad) loading.value = true;
             error.value = null;
             // Construct request payload
             const requestData = {
                 location: locationId,
                 startDate: startDate,
                 endDate: endDate,
-                isRepairOnly: isRepairOnly
+                isRepairOnly: isRepairOnly,
+                departmentId: departmentId,
+                employeeId: employeeId
             };
             
             console.log('Request payload being sent to backend:', JSON.stringify(requestData, null, 2));
@@ -129,7 +136,10 @@ export function useAllEfficiencyAnalysisApi() {
 
             if (responseJson && responseJson.status === "SUCCESS" && responseJson.data) {
                 responseJson.data = unwrapInEscapedBody(responseJson.data);
-                listEfficiencyData.value = responseJson.data; // Save data to the ref
+                if (!isLazyLoad) {
+                    listEfficiencyData.value = responseJson.data; // Save data to the ref for initial load
+                }
+                return responseJson.data; // Return for lazy loading merging
             } else {
                 throw new Error(responseJson.message || "Failed to fetch locations");
             }
@@ -137,7 +147,7 @@ export function useAllEfficiencyAnalysisApi() {
             error.value = err.message;
             console.error("Error fetching locations:", err);
         } finally {
-            loading.value = false;
+            if (!isLazyLoad) loading.value = false;
         }
     };
     
@@ -200,6 +210,35 @@ export function useAllEfficiencyAnalysisApi() {
         } finally {
             loading.value = false;
         }
+    };
+    
+    //export efficiency excel
+    const exportEfficiencyExcel = async (data) => {
+        try {
+            loading.value = true;
+            error.value = null;
+            const payload = { ...data };
+            const endpoint = "EXPORT_EFFICIENCY_EXCEL";
+            const response = await fetch(generateEndPoint(endpoint, END_POINTS), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            const responseJson = await response.json();
+
+            if (responseJson && responseJson.status === "SUCCESS") {
+                return responseJson;
+            } else {
+                throw new Error(responseJson.reason || "Failed to trigger excel export");
+            }
+        } catch (err) {
+            error.value = err.message;
+            console.error("Error triggering export:", err);
+            throw err;
+        } finally {
+            loading.value = false;
+        }
     }
 
     return {
@@ -214,6 +253,7 @@ export function useAllEfficiencyAnalysisApi() {
         listEfficiencyData,
         fetchListEfficiencyAnalysis,
         fetchInventoryAdjustments,
-        fetchRecoveryDataBatch
+        fetchRecoveryDataBatch,
+        exportEfficiencyExcel
     };
 }
